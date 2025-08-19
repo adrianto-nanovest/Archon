@@ -203,7 +203,7 @@ class ProjectCreationService:
                 return False
 
             # Import DocumentAgent (lazy import to avoid startup issues)
-            from ...agents.document_agent import DocumentAgent
+            from ....agents.document_agent import DocumentAgent
 
             await self.progress_service.update_progress(
                 progress_id,

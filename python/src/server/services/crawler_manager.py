@@ -6,13 +6,16 @@ This avoids circular imports by providing a service-level access to the crawler.
 """
 
 import os
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     from crawl4ai import AsyncWebCrawler, BrowserConfig
-except ImportError:
-    AsyncWebCrawler = None
-    BrowserConfig = None
+else:
+    try:
+        from crawl4ai import AsyncWebCrawler, BrowserConfig
+    except ImportError:
+        AsyncWebCrawler = None
+        BrowserConfig = None
 
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 
@@ -23,7 +26,7 @@ class CrawlerManager:
     """Manages the global crawler instance."""
 
     _instance: Optional["CrawlerManager"] = None
-    _crawler: AsyncWebCrawler | None = None
+    _crawler: Optional["AsyncWebCrawler"] = None
     _initialized: bool = False
 
     def __new__(cls):
@@ -31,7 +34,7 @@ class CrawlerManager:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    async def get_crawler(self) -> AsyncWebCrawler:
+    async def get_crawler(self) -> "AsyncWebCrawler":
         """Get or create the crawler instance."""
         if not self._initialized:
             await self.initialize()
@@ -149,7 +152,7 @@ class CrawlerManager:
 _crawler_manager = CrawlerManager()
 
 
-async def get_crawler() -> AsyncWebCrawler | None:
+async def get_crawler() -> Optional["AsyncWebCrawler"]:
     """Get the global crawler instance."""
     global _crawler_manager
     crawler = await _crawler_manager.get_crawler()

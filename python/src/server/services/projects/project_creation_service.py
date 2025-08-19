@@ -152,7 +152,7 @@ class ProjectCreationService:
                 return False
 
             # Import DocumentAgent (lazy import to avoid startup issues)
-            from ...agents.document_agent import DocumentAgent
+            from ....agents.document_agent import DocumentAgent
 
 
 

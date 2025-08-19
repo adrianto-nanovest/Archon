@@ -19,6 +19,7 @@ from pydantic_ai import Agent, RunContext
 
 from .base_agent import ArchonDependencies, BaseAgent
 from .mcp_client import get_mcp_client
+from ..server.utils import get_supabase_client
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +248,7 @@ class DocumentAgent(BaseAgent[DocumentDependencies, DocumentOperation]):
                 content = {"id": str(uuid.uuid4()), "title": title, "blocks": blocks}
 
                 # Create document via DocumentService
-                from ..services.projects.document_service import DocumentService
+                from ..server.services.projects.document_service import DocumentService
 
                 doc_service = DocumentService()
                 success, result_data = doc_service.add_document(
@@ -795,7 +796,7 @@ class DocumentAgent(BaseAgent[DocumentDependencies, DocumentOperation]):
     def get_system_prompt(self) -> str:
         """Get the base system prompt for this agent."""
         try:
-            from ..services.prompt_service import prompt_service
+            from ..server.services.prompt_service import prompt_service
 
             # For now, use document_builder as default
             # In future, could make this configurable based on operation type

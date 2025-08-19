@@ -18,16 +18,11 @@ from datetime import datetime
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from ..utils import get_supabase_client
-from ..services.storage import DocumentStorageService
-from ..services.search.rag_service import RAGService
-from ..services.knowledge import KnowledgeItemService, DatabaseMetricsService
-from ..services.crawling import CrawlOrchestrationService
-from ..services.crawler_manager import get_crawler
-
 # Import unified logging
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ..services.crawler_manager import get_crawler
+from ..services.crawling import CrawlOrchestrationService
+from ..services.knowledge import DatabaseMetricsService, KnowledgeItemService
 from ..services.search.rag_service import RAGService
 from ..services.storage import DocumentStorageService
 from ..utils import get_supabase_client
@@ -513,11 +508,6 @@ async def upload_document(
 ):
     """Upload and process a document with progress tracking."""
     try:
-        # DETAILED LOGGING: Track knowledge_type parameter flow
-        safe_logfire_info(
-            f"📋 UPLOAD: Starting document upload | filename={file.filename} | content_type={file.content_type} | knowledge_type={knowledge_type}"
-        )
-        
         safe_logfire_info(
             f"Starting document upload | filename={file.filename} | content_type={file.content_type} | knowledge_type={knowledge_type}"
         )
@@ -907,7 +897,7 @@ async def stop_crawl_task(progress_id: str):
     """Stop a running crawl task."""
     try:
         from ..services.crawling import get_active_orchestration, unregister_orchestration
-        
+
         # Emit stopping status immediately
         await sio.emit(
             "crawl:stopping",

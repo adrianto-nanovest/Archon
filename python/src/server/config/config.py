@@ -67,8 +67,8 @@ def validate_supabase_key(supabase_key: str) -> tuple[bool, str]:
         # We don't verify the signature since we only need to check the role
         # Also skip all other validations (aud, exp, etc) since we only care about the role
         decoded = jwt.decode(
-            supabase_key, 
-            '', 
+            supabase_key,
+            '',
             options={
                 "verify_signature": False,
                 "verify_aud": False,
@@ -101,7 +101,7 @@ def validate_supabase_url(url: str) -> bool:
     # Allow HTTP for local development (host.docker.internal or localhost)
     if parsed.scheme not in ("http", "https"):
         raise ConfigurationError("Supabase URL must use HTTP or HTTPS")
-    
+
     # Require HTTPS for production (non-local) URLs
     if parsed.scheme == "http":
         hostname = parsed.hostname or ""

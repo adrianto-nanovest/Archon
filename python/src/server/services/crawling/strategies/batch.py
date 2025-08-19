@@ -4,9 +4,11 @@ Batch Crawling Strategy
 Handles batch crawling of multiple URLs in parallel.
 """
 
-from typing import List, Dict, Any, Optional, Callable
+from collections.abc import Callable
+from typing import Any
 
-from crawl4ai import CrawlerRunConfig, CacheMode, MemoryAdaptiveDispatcher
+from crawl4ai import CacheMode, CrawlerRunConfig, MemoryAdaptiveDispatcher
+
 from ....config.logfire_config import get_logger
 from ...credential_service import credential_service
 
@@ -29,14 +31,14 @@ class BatchCrawlStrategy:
 
     async def crawl_batch_with_progress(
         self,
-        urls: List[str],
+        urls: list[str],
         transform_url_func: Callable[[str], str],
         is_documentation_site_func: Callable[[str], bool],
         max_concurrent: int = None,
-        progress_callback: Optional[Callable] = None,
+        progress_callback: Callable | None = None,
         start_progress: int = 15,
         end_progress: int = 60,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Batch crawl multiple URLs in parallel with progress reporting.
 
@@ -69,12 +71,10 @@ class BatchCrawlStrategy:
         except (ValueError, KeyError, TypeError) as e:
             # Critical configuration errors should fail fast in alpha
             logger.error(f"Invalid crawl settings format: {e}", exc_info=True)
-            raise ValueError(f"Failed to load crawler configuration: {e}") from e
+            raise ValueError(f"Failed to load crawler configuration: {e}")
         except Exception as e:
             # For non-critical errors (e.g., network issues), use defaults but log prominently
-            logger.error(
-                f"Failed to load crawl settings from database: {e}, using defaults", exc_info=True
-            )
+            logger.error(f"Failed to load crawl settings from database: {e}, using defaults", exc_info=True)
             batch_size = 50
             if max_concurrent is None:
                 max_concurrent = 10  # Safe default to prevent memory issues
@@ -92,6 +92,7 @@ class BatchCrawlStrategy:
                 cache_mode=CacheMode.BYPASS,
                 stream=True,  # Enable streaming for faster parallel processing
                 markdown_generator=self.markdown_generator,
+                wait_for="body",  # Simple selector for batch
                 wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
                 page_timeout=int(settings.get("CRAWL_PAGE_TIMEOUT", "30000")),
                 delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "1.0")),
@@ -119,11 +120,10 @@ class BatchCrawlStrategy:
             max_session_permit=max_concurrent,
         )
 
-        async def report_progress(percentage: int, message: str, **kwargs):
+        async def report_progress(percentage: int, message: str):
             """Helper to report progress if callback is available"""
             if progress_callback:
-                step_info = {"currentStep": message, "stepMessage": message, **kwargs}
-                await progress_callback("crawling", percentage, message, step_info=step_info)
+                await progress_callback("crawling", percentage, message)
 
         total_urls = len(urls)
         await report_progress(start_progress, f"Starting to crawl {total_urls} URLs...")
@@ -163,6 +163,7 @@ class BatchCrawlStrategy:
             )
 
             # Handle streaming results
+            j = 0
             async for result in batch_results:
                 processed += 1
                 if result.success and result.markdown:
@@ -190,6 +191,7 @@ class BatchCrawlStrategy:
                         progress_percentage,
                         f"Crawled {processed}/{total_urls} pages ({len(successful_results)} successful)",
                     )
+                j += 1
 
         await report_progress(
             end_progress,

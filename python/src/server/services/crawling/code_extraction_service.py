@@ -886,8 +886,8 @@ class CodeExtractionService:
             "python": [
                 r"\bdef\s+\w+\s*\(",
                 r"\bclass\s+\w+",
-                r"\bimport\s+\w+",
-                r"\bfrom\s+\w+\s+import",
+                r"\bimport\s+[\w.]+",
+                r"\bfrom\s+[\w.]+\s+import",
             ],
             "javascript": [
                 r"\bfunction\s+\w+\s*\(",
@@ -1417,6 +1417,9 @@ class CodeExtractionService:
         code_summaries = []
         code_metadatas = []
 
+        # Track chunk numbers per URL to reset for each new URL
+        url_chunk_counters = {}
+
         for code_item, summary_result in zip(all_code_blocks, summary_results, strict=False):
             block = code_item["block"]
             source_url = code_item["source_url"]
@@ -1425,13 +1428,20 @@ class CodeExtractionService:
             summary = summary_result.get("summary", "Code example for demonstration purposes.")
             example_name = summary_result.get("example_name", "Code Example")
 
+            # Get or initialize chunk counter for this URL
+            if source_url not in url_chunk_counters:
+                url_chunk_counters[source_url] = 0
+
+            chunk_number = url_chunk_counters[source_url]
+            url_chunk_counters[source_url] += 1
+
             code_urls.append(source_url)
-            code_chunk_numbers.append(len(code_examples))
+            code_chunk_numbers.append(chunk_number)
             code_examples.append(block["code"])
             code_summaries.append(summary)
 
             code_meta = {
-                "chunk_index": len(code_examples) - 1,
+                "chunk_index": chunk_number,
                 "url": source_url,
                 "source": source_id,
                 "source_id": source_id,

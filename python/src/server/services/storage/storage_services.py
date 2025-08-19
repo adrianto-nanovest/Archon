@@ -41,6 +41,7 @@ class DocumentStorageService(BaseStorageService):
             tags: Optional list of tags
             websocket: Optional WebSocket for progress
             progress_callback: Optional callback for progress
+            cancellation_check: Optional callback to check for cancellation
 
         Returns:
             Tuple of (success, result_dict)
@@ -71,6 +72,11 @@ class DocumentStorageService(BaseStorageService):
 
                 await report_progress("Starting document processing...", 10)
 
+                # Check for cancellation
+                if cancellation_check and await cancellation_check():
+                    logger.info(f"Upload cancelled for {filename}")
+                    return False, {"error": "Upload cancelled by user"}
+
                 # Use base class chunking
                 chunks = await self.smart_chunk_text_async(
                     file_content,
@@ -85,6 +91,11 @@ class DocumentStorageService(BaseStorageService):
 
                 await report_progress("Preparing document chunks...", 30)
 
+                # Check for cancellation
+                if cancellation_check and await cancellation_check():
+                    logger.info(f"Upload cancelled for {filename}")
+                    return False, {"error": "Upload cancelled by user"}
+
                 # Prepare data for storage
                 doc_url = f"file://{filename}"
                 urls = []
@@ -95,6 +106,11 @@ class DocumentStorageService(BaseStorageService):
 
                 # Process chunks with metadata
                 for i, chunk in enumerate(chunks):
+                    # Check for cancellation periodically
+                    if cancellation_check and await cancellation_check():
+                        logger.info(f"Upload cancelled for {filename}")
+                        return False, {"error": "Upload cancelled by user"}
+
                     # Use base class metadata extraction
                     meta = self.extract_metadata(
                         chunk,
@@ -104,7 +120,6 @@ class DocumentStorageService(BaseStorageService):
                             "source": source_id,
                             "source_id": source_id,
                             "knowledge_type": knowledge_type,
-                            "source_type": "file",  # FIX: Mark as file upload
                             "filename": filename,
                         },
                     )
@@ -116,169 +131,105 @@ class DocumentStorageService(BaseStorageService):
                     chunk_numbers.append(i)
                     contents.append(chunk)
                     metadatas.append(meta)
-                    total_word_count += meta.get("word_count", 0)
+                    total_word_count += len(chunk.split())
 
-                await report_progress("Updating source information...", 50)
+                await report_progress("Generating embeddings and storing...", 60)
 
-                # Create URL to full document mapping
-                url_to_full_document = {doc_url: file_content}
-
-                # Update source information
-                from ...utils import extract_source_summary, update_source_info
-
-                source_summary = await self.threading_service.run_cpu_intensive(
-                    extract_source_summary, source_id, file_content[:5000]
-                )
-
-                logger.info(f"Updating source info for {source_id} with knowledge_type={knowledge_type}")
-                await self.threading_service.run_io_bound(
-                    update_source_info,
-                    self.supabase_client,
-                    source_id,
-                    source_summary,
-                    total_word_count,
-                    file_content[:1000],  # content for title generation
-                    knowledge_type,      # FIX: Pass knowledge_type parameter!
-                    tags,               # FIX: Pass tags parameter!
-                )
-
-                await report_progress("Storing document chunks...", 70)
-
-                # Store documents
-                await add_documents_to_supabase(
-                    client=self.supabase_client,
+                # Store documents in database
+                success, docs_result = await add_documents_to_supabase(
                     urls=urls,
                     chunk_numbers=chunk_numbers,
                     contents=contents,
                     metadatas=metadatas,
-                    url_to_full_document=url_to_full_document,
-                    batch_size=15,
-                    progress_callback=progress_callback,
-                    enable_parallel_batches=True,
-                    provider=None,  # Use configured provider
+                    source_id=source_id,
+                    knowledge_type=knowledge_type,
                     cancellation_check=cancellation_check,
+                    progress_callback=lambda msg, pct: report_progress(
+                        f"Storage: {msg}", 60 + float(pct) * 0.35
+                    ),
                 )
 
-                await report_progress("Document upload completed!", 100)
+                if not success:
+                    raise ValueError(f"Failed to store documents: {docs_result.get('error', 'Unknown error')}")
 
-                result = {
-                    "chunks_stored": len(chunks),
-                    "total_word_count": total_word_count,
+                await report_progress("Document upload completed successfully!", 100)
+
+                # Set span attributes
+                span.set_attribute("chunks_processed", len(chunks))
+                span.set_attribute("total_word_count", total_word_count)
+                span.set_attribute("documents_stored", docs_result.get("documents_stored", 0))
+
+                logger.info(
+                    f"Document upload completed: {filename} - {len(chunks)} chunks, {total_word_count} words"
+                )
+
+                return True, {
+                    "message": f"Document '{filename}' uploaded successfully",
+                    "filename": filename,
                     "source_id": source_id,
+                    "knowledge_type": knowledge_type,
+                    "chunks_processed": len(chunks),
+                    "total_word_count": total_word_count,
+                    "documents_stored": docs_result.get("documents_stored", 0),
+                }
+
+            except Exception as e:
+                logger.error(f"Error uploading document {filename}: {e}")
+                span.set_attribute("error", str(e))
+                
+                # Send error progress if we can
+                try:
+                    await report_progress(f"Error: {str(e)}", -1)
+                except Exception:
+                    pass  # Don't let progress reporting errors mask the original error
+                    
+                return False, {
+                    "error": f"Failed to upload document: {str(e)}",
                     "filename": filename,
                 }
 
-                span.set_attribute("success", True)
-                span.set_attribute("chunks_stored", len(chunks))
-                span.set_attribute("total_word_count", total_word_count)
 
-                logger.info(
-                    f"Document upload completed successfully: filename={filename}, chunks_stored={len(chunks)}, total_word_count={total_word_count}"
-                )
+class CodeStorageService(BaseStorageService):
+    """Service for handling code storage operations."""
 
-                return True, result
-
-            except Exception as e:
-                span.set_attribute("success", False)
-                span.set_attribute("error", str(e))
-                logger.error(f"Error uploading document: {e}")
-
-                if websocket:
-                    await websocket.send_json({
-                        "type": "upload_error",
-                        "error": str(e),
-                        "filename": filename,
-                    })
-
-                return False, {"error": f"Error uploading document: {str(e)}"}
-
-    async def store_documents(self, documents: list[dict[str, Any]], **kwargs) -> dict[str, Any]:
-        """
-        Store multiple documents. Implementation of abstract method.
-
-        Args:
-            documents: List of documents to store
-            **kwargs: Additional options (websocket, progress_callback, etc.)
-
-        Returns:
-            Storage result
-        """
-        results = []
-        for doc in documents:
-            success, result = await self.upload_document(
-                file_content=doc["content"],
-                filename=doc["filename"],
-                source_id=doc.get("source_id", "upload"),
-                knowledge_type=doc.get("knowledge_type", "documentation"),
-                tags=doc.get("tags"),
-                websocket=kwargs.get("websocket"),
-                progress_callback=kwargs.get("progress_callback"),
-                cancellation_check=kwargs.get("cancellation_check"),
-            )
-            results.append(result)
-
-        return {
-            "success": all(r.get("chunks_stored", 0) > 0 for r in results),
-            "documents_processed": len(documents),
-            "results": results,
-        }
-
-    async def process_document(self, document: dict[str, Any], **kwargs) -> dict[str, Any]:
-        """
-        Process a single document. Implementation of abstract method.
-
-        Args:
-            document: Document to process
-            **kwargs: Additional processing options
-
-        Returns:
-            Processed document with metadata
-        """
-        # Extract text content
-        content = document.get("content", "")
-
-        # Chunk the content
-        chunks = await self.smart_chunk_text_async(content)
-
-        # Extract metadata for each chunk
-        processed_chunks = []
-        for i, chunk in enumerate(chunks):
-            meta = self.extract_metadata(
-                chunk, {"chunk_index": i, "source": document.get("source", "unknown")}
-            )
-            processed_chunks.append({"content": chunk, "metadata": meta})
-
-        return {
-            "chunks": processed_chunks,
-            "total_chunks": len(chunks),
-            "source": document.get("source"),
-        }
-
-    def store_code_examples(
-        self, code_examples: list[dict[str, Any]]
+    async def store_code_examples(
+        self,
+        code_examples: list[dict[str, Any]],
+        source_id: str,
+        progress_callback: Any | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """
-        Store code examples. This is kept for backward compatibility.
-        The actual implementation should use add_code_examples_to_supabase directly.
+        Store code examples in the database.
 
         Args:
-            code_examples: List of code examples
+            code_examples: List of code example dictionaries
+            source_id: Source identifier
+            progress_callback: Optional callback for progress updates
 
         Returns:
-            Tuple of (success, result)
+            Tuple of (success, result_dict)
         """
         try:
-            if not code_examples:
-                return True, {"code_examples_stored": 0}
+            logger.info(f"Storing {len(code_examples)} code examples for source: {source_id}")
 
-            # This method exists for backward compatibility
-            # The actual storage should be done through the proper service functions
-            logger.warning(
-                "store_code_examples is deprecated. Use add_code_examples_to_supabase directly."
+            if progress_callback:
+                await progress_callback("Storing code examples...", 0)
+
+            # Import the code storage service function
+            from .code_storage_service import store_code_examples
+
+            # Store the code examples
+            success, result = await store_code_examples(
+                code_examples, source_id, progress_callback
             )
 
-            return True, {"code_examples_stored": len(code_examples)}
+            if progress_callback:
+                await progress_callback("Code examples stored successfully", 100)
+
+            return success, result
 
         except Exception as e:
             logger.error(f"Error in store_code_examples: {e}")
+            if progress_callback:
+                await progress_callback(f"Error storing code examples: {e}", -1)
             return False, {"error": str(e)}

@@ -496,7 +496,7 @@ function getEmbeddingPlaceholder(provider: string): string {
     case 'ollama':
       return 'e.g., nomic-embed-text';
     case 'google':
-      return 'e.g., text-embedding-004';
+      return 'e.g., gemini-embedding-001';
     default:
       return 'Default: text-embedding-3-small';
   }

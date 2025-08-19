@@ -5,7 +5,7 @@ Implements result reranking using CrossEncoder models to improve search result o
 The reranking process re-scores search results based on query-document relevance using
 a trained neural model, typically improving precision over initial retrieval scores.
 
-Uses the cross-encoder/ms-marco-MiniLM-L-6-v2 model for reranking by default.
+Uses the cross-encoder/ms-marco-MiniLM-L6-v2 model for reranking by default.
 """
 
 import os
@@ -24,7 +24,7 @@ from ...config.logfire_config import get_logger, safe_span
 logger = get_logger(__name__)
 
 # Default reranking model
-DEFAULT_RERANKING_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+DEFAULT_RERANKING_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 
 
 class RerankingStrategy:

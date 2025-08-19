@@ -2440,7 +2440,7 @@ function getEmbeddingPlaceholder(provider: ProviderKey): string {
     case 'anthropic':
       return 'Claude does not provide embedding models';
     case 'google':
-      return 'e.g., text-embedding-004';
+      return 'e.g., gemini-embedding-001';
     case 'grok':
       return 'Grok does not provide embedding models';
     case 'ollama':

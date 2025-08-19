@@ -88,7 +88,7 @@ class TestAsyncLLMProviderService:
             "api_key": "test-google-key",
             "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
             "chat_model": "gemini-pro",
-            "embedding_model": "text-embedding-004",
+            "embedding_model": "gemini-embedding-001",
         }
 
     @pytest.mark.asyncio
@@ -275,7 +275,7 @@ class TestAsyncLLMProviderService:
             "api_key": None,
             "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
             "chat_model": "gemini-pro",
-            "embedding_model": "text-embedding-004",
+            "embedding_model": "gemini-embedding-001",
         }
         mock_credential_service.get_active_provider.return_value = config_without_key
 
@@ -358,7 +358,7 @@ class TestAsyncLLMProviderService:
             "src.server.services.llm_provider_service.credential_service", mock_credential_service
         ):
             model = await get_embedding_model()
-            assert model == "text-embedding-004"
+            assert model == "gemini-embedding-001"
 
     @pytest.mark.asyncio
     async def test_get_embedding_model_with_provider_override(self, mock_credential_service):

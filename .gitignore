@@ -14,7 +14,8 @@ UAT/
 .DS_Store
 .bmad-core
 .claude
-.gemini
+# .gemini
+# docs/claude-notes
 # *.png
 # *.jpg
 # *.jpeg

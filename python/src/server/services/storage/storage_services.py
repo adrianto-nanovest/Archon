@@ -47,7 +47,7 @@ class DocumentStorageService(BaseStorageService):
             Tuple of (success, result_dict)
         """
         logger.info(f"Document upload starting: {filename} as {knowledge_type} knowledge")
-        
+
         with safe_span(
             "upload_document",
             filename=filename,
@@ -120,6 +120,7 @@ class DocumentStorageService(BaseStorageService):
                             "source": source_id,
                             "source_id": source_id,
                             "knowledge_type": knowledge_type,
+                            "source_type": "file",  # FIX: Mark as file upload
                             "filename": filename,
                         },
                     )
@@ -131,62 +132,143 @@ class DocumentStorageService(BaseStorageService):
                     chunk_numbers.append(i)
                     contents.append(chunk)
                     metadatas.append(meta)
-                    total_word_count += len(chunk.split())
+                    total_word_count += meta.get("word_count", 0)
 
-                await report_progress("Generating embeddings and storing...", 60)
+                await report_progress("Updating source information...", 50)
 
-                # Store documents in database
-                success, docs_result = await add_documents_to_supabase(
+                # Create URL to full document mapping
+                url_to_full_document = {doc_url: file_content}
+
+                # Update source information
+                from ...utils import extract_source_summary, update_source_info
+
+                source_summary = await self.threading_service.run_cpu_intensive(
+                    extract_source_summary, source_id, file_content[:5000]
+                )
+
+                logger.info(f"Updating source info for {source_id} with knowledge_type={knowledge_type}")
+                await self.threading_service.run_io_bound(
+                    update_source_info,
+                    self.supabase_client,
+                    source_id,
+                    source_summary,
+                    total_word_count,
+                    file_content[:1000],  # content for title generation
+                    knowledge_type,      # FIX: Pass knowledge_type parameter!
+                    tags,               # FIX: Pass tags parameter!
+                )
+
+                await report_progress("Storing document chunks...", 70)
+
+                # Store documents
+                await add_documents_to_supabase(
+                    client=self.supabase_client,
                     urls=urls,
                     chunk_numbers=chunk_numbers,
                     contents=contents,
                     metadatas=metadatas,
-                    source_id=source_id,
-                    knowledge_type=knowledge_type,
+                    url_to_full_document=url_to_full_document,
+                    batch_size=15,
+                    progress_callback=progress_callback,
+                    enable_parallel_batches=True,
+                    provider=None,  # Use configured provider
                     cancellation_check=cancellation_check,
-                    progress_callback=lambda msg, pct: report_progress(
-                        f"Storage: {msg}", 60 + float(pct) * 0.35
-                    ),
                 )
 
-                if not success:
-                    raise ValueError(f"Failed to store documents: {docs_result.get('error', 'Unknown error')}")
+                await report_progress("Document upload completed!", 100)
 
-                await report_progress("Document upload completed successfully!", 100)
+                result = {
+                    "chunks_stored": len(chunks),
+                    "total_word_count": total_word_count,
+                    "source_id": source_id,
+                    "filename": filename,
+                }
 
-                # Set span attributes
-                span.set_attribute("chunks_processed", len(chunks))
+                span.set_attribute("success", True)
+                span.set_attribute("chunks_stored", len(chunks))
                 span.set_attribute("total_word_count", total_word_count)
-                span.set_attribute("documents_stored", docs_result.get("documents_stored", 0))
 
                 logger.info(
-                    f"Document upload completed: {filename} - {len(chunks)} chunks, {total_word_count} words"
+                    f"Document upload completed successfully: filename={filename}, chunks_stored={len(chunks)}, total_word_count={total_word_count}"
                 )
 
-                return True, {
-                    "message": f"Document '{filename}' uploaded successfully",
-                    "filename": filename,
-                    "source_id": source_id,
-                    "knowledge_type": knowledge_type,
-                    "chunks_processed": len(chunks),
-                    "total_word_count": total_word_count,
-                    "documents_stored": docs_result.get("documents_stored", 0),
-                }
+                return True, result
 
             except Exception as e:
-                logger.error(f"Error uploading document {filename}: {e}")
+                span.set_attribute("success", False)
                 span.set_attribute("error", str(e))
-                
-                # Send error progress if we can
-                try:
-                    await report_progress(f"Error: {str(e)}", -1)
-                except Exception:
-                    pass  # Don't let progress reporting errors mask the original error
-                    
-                return False, {
-                    "error": f"Failed to upload document: {str(e)}",
-                    "filename": filename,
-                }
+                logger.error(f"Error uploading document: {e}")
+
+                if websocket:
+                    await websocket.send_json({
+                        "type": "upload_error",
+                        "error": str(e),
+                        "filename": filename,
+                    })
+
+                return False, {"error": f"Error uploading document: {str(e)}"}
+
+    async def store_documents(self, documents: list[dict[str, Any]], **kwargs) -> dict[str, Any]:
+        """
+        Store multiple documents. Implementation of abstract method.
+
+        Args:
+            documents: List of documents to store
+            **kwargs: Additional options (websocket, progress_callback, etc.)
+
+        Returns:
+            Storage result
+        """
+        results = []
+        for doc in documents:
+            success, result = await self.upload_document(
+                file_content=doc["content"],
+                filename=doc["filename"],
+                source_id=doc.get("source_id", "upload"),
+                knowledge_type=doc.get("knowledge_type", "documentation"),
+                tags=doc.get("tags"),
+                websocket=kwargs.get("websocket"),
+                progress_callback=kwargs.get("progress_callback"),
+                cancellation_check=kwargs.get("cancellation_check"),
+            )
+            results.append(result)
+
+        return {
+            "success": all(r.get("chunks_stored", 0) > 0 for r in results),
+            "documents_processed": len(documents),
+            "results": results,
+        }
+
+    async def process_document(self, document: dict[str, Any], **kwargs) -> dict[str, Any]:
+        """
+        Process a single document. Implementation of abstract method.
+
+        Args:
+            document: Document to process
+            **kwargs: Additional processing options
+
+        Returns:
+            Processed document with metadata
+        """
+        # Extract text content
+        content = document.get("content", "")
+
+        # Chunk the content
+        chunks = await self.smart_chunk_text_async(content)
+
+        # Extract metadata for each chunk
+        processed_chunks = []
+        for i, chunk in enumerate(chunks):
+            meta = self.extract_metadata(
+                chunk, {"chunk_index": i, "source": document.get("source", "unknown")}
+            )
+            processed_chunks.append({"content": chunk, "metadata": meta})
+
+        return {
+            "chunks": processed_chunks,
+            "total_chunks": len(chunks),
+            "source": document.get("source"),
+        }
 
 
 class CodeStorageService(BaseStorageService):
@@ -233,3 +315,57 @@ class CodeStorageService(BaseStorageService):
             if progress_callback:
                 await progress_callback(f"Error storing code examples: {e}", -1)
             return False, {"error": str(e)}
+
+    async def store_documents(self, documents: list[dict[str, Any]], **kwargs) -> dict[str, Any]:
+        """
+        Store documents. Implementation of abstract method.
+
+        Args:
+            documents: List of documents to store
+            **kwargs: Additional options
+
+        Returns:
+            Storage result
+        """
+        # For code storage, we treat documents as code examples
+        code_examples = [
+            {
+                "code": doc.get("content", ""),
+                "language": doc.get("language", "unknown"),
+                "context": doc.get("context", ""),
+            }
+            for doc in documents
+        ]
+
+        source_id = kwargs.get("source_id", "code_storage")
+        progress_callback = kwargs.get("progress_callback")
+
+        success, result = await self.store_code_examples(
+            code_examples, source_id, progress_callback
+        )
+
+        return {
+            "success": success,
+            "documents_processed": len(documents),
+            "result": result,
+        }
+
+    async def process_document(self, document: dict[str, Any], **kwargs) -> dict[str, Any]:
+        """
+        Process a document as code. Implementation of abstract method.
+
+        Args:
+            document: Document to process
+            **kwargs: Additional options
+
+        Returns:
+            Processed document
+        """
+        content = document.get("content", "")
+
+        # For code, we don't chunk but treat as single unit
+        return {
+            "chunks": [{"content": content, "metadata": {"type": "code"}}],
+            "total_chunks": 1,
+            "source": document.get("source"),
+        }

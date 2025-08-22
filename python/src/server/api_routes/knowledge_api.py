@@ -21,7 +21,7 @@ from pydantic import BaseModel
 # Import unified logging
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ..services.crawler_manager import get_crawler
-from ..services.crawling import CrawlOrchestrationService
+from ..services.crawling.crawling_service import CrawlingService
 from ..services.knowledge import DatabaseMetricsService, KnowledgeItemService
 from ..services.search.rag_service import RAGService
 from ..services.storage import DocumentStorageService
@@ -312,7 +312,7 @@ async def refresh_knowledge_item(source_id: str):
             )
 
         # Use the same crawl orchestration as regular crawl
-        crawl_service = CrawlOrchestrationService(
+        crawl_service = CrawlingService(
             crawler=crawler, supabase_client=get_supabase_client()
         )
         crawl_service.set_progress_id(progress_id)
@@ -439,7 +439,7 @@ async def _perform_crawl_with_progress(progress_id: str, request: KnowledgeItemR
                 return
 
             supabase_client = get_supabase_client()
-            orchestration_service = CrawlOrchestrationService(crawler, supabase_client)
+            orchestration_service = CrawlingService(crawler, supabase_client)
             orchestration_service.set_progress_id(progress_id)
 
             # Store the current task in active_crawl_tasks for cancellation support

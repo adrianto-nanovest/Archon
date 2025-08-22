@@ -12,3 +12,12 @@ temp/
 UAT/
 
 .DS_Store
+.bmad-core
+.claude
+.gemini
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
+# *.ico
+# *requirements.txt

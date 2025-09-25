@@ -40,7 +40,7 @@ const getDefaultModels = (provider: ProviderKey): ProviderModels => {
   const embeddingDefaults: Record<ProviderKey, string> = {
     openai: 'text-embedding-3-small',
     anthropic: 'text-embedding-3-small', // Fallback to OpenAI
-    google: 'text-embedding-004',
+    google: 'gemini-embedding-001',
     grok: 'text-embedding-3-small', // Fallback to OpenAI
     openrouter: 'text-embedding-3-small',
     ollama: 'nomic-embed-text'
@@ -140,7 +140,7 @@ const normalizeBaseUrl = (url?: string | null): string | null => {
 
 interface RAGSettingsProps {
   ragSettings: {
-    MODEL_CHOICE: string;
+    MODEL_CHOICE?: string;
     USE_CONTEXTUAL_EMBEDDINGS: boolean;
     CONTEXTUAL_EMBEDDINGS_MAX_WORKERS: number;
     USE_HYBRID_SEARCH: boolean;
@@ -438,11 +438,11 @@ export const RAGSettings = ({
 
 
   // Status tracking
-  const [llmStatus, setLLMStatus] = useState({ online: false, responseTime: null, checking: false });
-  const [embeddingStatus, setEmbeddingStatus] = useState({ online: false, responseTime: null, checking: false });
+  const [llmStatus, setLLMStatus] = useState<{ online: boolean; responseTime: number | null; checking: boolean }>({ online: false, responseTime: null, checking: false });
+  const [embeddingStatus, setEmbeddingStatus] = useState<{ online: boolean; responseTime: number | null; checking: boolean }>({ online: false, responseTime: null, checking: false });
   const llmRetryTimeoutRef = useRef<number | null>(null);
   const embeddingRetryTimeoutRef = useRef<number | null>(null);
-  
+
   // API key credentials for status checking
   const [apiCredentials, setApiCredentials] = useState<{[key: string]: boolean}>({});
   // Provider connection status tracking
@@ -721,9 +721,7 @@ const manualTestConnection = async (
       });
       
       // Clear related RAG settings
-      const updatedSettings = { ...ragSettings };
-      delete updatedSettings.LLM_BASE_URL;
-      delete updatedSettings.MODEL_CHOICE;
+      const { LLM_BASE_URL, MODEL_CHOICE, ...updatedSettings } = ragSettings;
       setRagSettings(updatedSettings);
       
       // Reset status

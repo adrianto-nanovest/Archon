@@ -16,7 +16,7 @@ export interface RagSettings {
   USE_HYBRID_SEARCH: boolean;
   USE_AGENTIC_RAG: boolean;
   USE_RERANKING: boolean;
-  MODEL_CHOICE: string;
+  MODEL_CHOICE?: string;
   LLM_PROVIDER?: string;
   LLM_BASE_URL?: string;
   LLM_INSTANCE_NAME?: string;
@@ -391,15 +391,15 @@ class CredentialsService {
         const key = cred.key as keyof CodeExtractionSettings;
         if (typeof settings[key] === "number") {
           if (key === "MAX_PROSE_RATIO") {
-            settings[key] = parseFloat(cred.value || "0.15");
+            (settings as any)[key] = parseFloat(cred.value || "0.15");
           } else {
-            settings[key] = parseInt(
+            (settings as any)[key] = parseInt(
               cred.value || settings[key].toString(),
               10,
             );
           }
         } else if (typeof settings[key] === "boolean") {
-          settings[key] = cred.value === "true";
+          (settings as any)[key] = cred.value === "true";
         }
       }
     });

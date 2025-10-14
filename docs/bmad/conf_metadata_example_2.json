@@ -1,0 +1,492 @@
+{
+  "page_id": "1100808193",
+  "title": "Deployment Checklist Release 4.9.0",
+  "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/1100808193/Deployment+Checklist+Release+4.9.0",
+  "space_key": "NANOVEST",
+  "space_id": 294913,
+  "version": 29,
+  "parent_id": "948273500",
+  "ancestors": [
+    {
+      "id": "294914",
+      "title": "Nanovest",
+      "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/overview"
+    },
+    {
+      "id": "129828371",
+      "title": "Deployment Checklist for Releases",
+      "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/129828371/Deployment+Checklist+for+Releases"
+    },
+    {
+      "id": "894205953",
+      "title": "2025 - Deployment Checklist",
+      "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/894205953/2025+-+Deployment+Checklist"
+    },
+    {
+      "id": "948273500",
+      "title": "Individual Deployment Checklist 2025",
+      "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/948273500/Individual+Deployment+Checklist+2025"
+    }
+  ],
+  "children": [],
+  "created_by": {
+    "account_id": "61ad6c68c75da8007239a6db",
+    "display_name": "Yunifa Wirman",
+    "email": "yunifa.wirman@nanovest.io",
+    "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/61ad6c68c75da8007239a6db"
+  },
+  "created_at": "2025-04-12T04:13:57.470Z",
+  "last_updated_at": "2025-06-13T12:24:19.563Z",
+  "external_links": [],
+  "internal_links": [
+    {
+      "page_id": "166199304",
+      "page_title": "Definition of Ready (DoR) and Definition of Done (DoD)",
+      "page_url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/166199304/Definition+of+Ready+DoR+and+Definition+of+Done+DoD"
+    }
+  ],
+  "jira_issue_links": [
+    {
+      "issue_key": "IC-548",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-548"
+    },
+    {
+      "issue_key": "IC-421",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-421"
+    },
+    {
+      "issue_key": "IC-583",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-583"
+    },
+    {
+      "issue_key": "IC-565",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-565"
+    },
+    {
+      "issue_key": "CP-5367",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5367"
+    },
+    {
+      "issue_key": "CP-5355",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5355"
+    },
+    {
+      "issue_key": "CP-5349",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5349"
+    },
+    {
+      "issue_key": "CP-5324",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5324"
+    },
+    {
+      "issue_key": "CP-5311",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5311"
+    },
+    {
+      "issue_key": "CP-5310",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5310"
+    },
+    {
+      "issue_key": "CP-5309",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5309"
+    },
+    {
+      "issue_key": "STOCKS-5213",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5213"
+    },
+    {
+      "issue_key": "STOCKS-5210",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5210"
+    },
+    {
+      "issue_key": "STOCKS-5179",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5179"
+    },
+    {
+      "issue_key": "STOCKS-5056",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5056"
+    },
+    {
+      "issue_key": "STOCKS-5047",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5047"
+    },
+    {
+      "issue_key": "STOCKS-5046",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5046"
+    },
+    {
+      "issue_key": "STOCKS-4657",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-4657"
+    },
+    {
+      "issue_key": "STOCKS-3741",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-3741"
+    },
+    {
+      "issue_key": "STOCKS-3628",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-3628"
+    },
+    {
+      "issue_key": "IUG-586",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-586"
+    },
+    {
+      "issue_key": "IUG-557",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-557"
+    },
+    {
+      "issue_key": "IUG-515",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-515"
+    },
+    {
+      "issue_key": "IUG-514",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-514"
+    },
+    {
+      "issue_key": "IUG-508",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-508"
+    },
+    {
+      "issue_key": "INSTIA-279",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIA-279"
+    },
+    {
+      "issue_key": "INSTIA-266",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIA-266"
+    },
+    {
+      "issue_key": "INSTIA-259",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIA-259"
+    },
+    {
+      "issue_key": "INSTIA-215",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIA-215"
+    },
+    {
+      "issue_key": "INSTIB-155",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIB-155"
+    },
+    {
+      "issue_key": "IC-583",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-583"
+    },
+    {
+      "issue_key": "IC-565",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-565"
+    },
+    {
+      "issue_key": "IC-507",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IC-507"
+    },
+    {
+      "issue_key": "CP-5353",
+      "issue_url": "https://nano-vest.atlassian.net/browse/CP-5353"
+    },
+    {
+      "issue_key": "STOCKS-5213",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5213"
+    },
+    {
+      "issue_key": "STOCKS-5209",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5209"
+    },
+    {
+      "issue_key": "STOCKS-5203",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5203"
+    },
+    {
+      "issue_key": "STOCKS-5200",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5200"
+    },
+    {
+      "issue_key": "STOCKS-5199",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5199"
+    },
+    {
+      "issue_key": "STOCKS-5197",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5197"
+    },
+    {
+      "issue_key": "STOCKS-5178",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5178"
+    },
+    {
+      "issue_key": "STOCKS-5177",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5177"
+    },
+    {
+      "issue_key": "STOCKS-5176",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5176"
+    },
+    {
+      "issue_key": "STOCKS-5175",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5175"
+    },
+    {
+      "issue_key": "STOCKS-5147",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5147"
+    },
+    {
+      "issue_key": "STOCKS-5144",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5144"
+    },
+    {
+      "issue_key": "IUG-500",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-500"
+    },
+    {
+      "issue_key": "IUG-593",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-593"
+    },
+    {
+      "issue_key": "IUG-569",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-569"
+    },
+    {
+      "issue_key": "IUG-568",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-568"
+    },
+    {
+      "issue_key": "IUG-566",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-566"
+    },
+    {
+      "issue_key": "IUG-536",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-536"
+    },
+    {
+      "issue_key": "IUG-511",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-511"
+    },
+    {
+      "issue_key": "INSTIA-279",
+      "issue_url": "https://nano-vest.atlassian.net/browse/INSTIA-279"
+    },
+    {
+      "issue_key": "STOCKS-5132",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5132"
+    },
+    {
+      "issue_key": "STOCKS-5133",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5133"
+    },
+    {
+      "issue_key": "STOCKS-5204",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5204"
+    },
+    {
+      "issue_key": "STOCKS-5094",
+      "issue_url": "https://nano-vest.atlassian.net/browse/STOCKS-5094"
+    },
+    {
+      "issue_key": "IUG-601",
+      "issue_url": "https://nano-vest.atlassian.net/browse/IUG-601"
+    }
+  ],
+  "user_mentions": [
+    {
+      "account_id": "712020:ff191ea9-ad26-470f-b303-277ba7039923",
+      "display_name": "Vinncent Alexander Wong (Unlicensed)",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:ff191ea9-ad26-470f-b303-277ba7039923"
+    },
+    {
+      "account_id": "63da1823bf837c6893d76919",
+      "display_name": "Muhammad Dani Ardiansyah Irwendy",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/63da1823bf837c6893d76919"
+    },
+    {
+      "account_id": "712020:bb9c1ea3-ef3e-4a74-988e-ffc635e9c412",
+      "display_name": "Agung Hadiwaluyo (Unlicensed)",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:bb9c1ea3-ef3e-4a74-988e-ffc635e9c412"
+    },
+    {
+      "account_id": "62c5337ba152cf973644c504",
+      "display_name": "Faisal Arkan",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62c5337ba152cf973644c504"
+    },
+    {
+      "account_id": "712020:dfc4dcfc-cb2d-4efb-a38c-e56b3e9b0395",
+      "display_name": "simranjeet.singh",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:dfc4dcfc-cb2d-4efb-a38c-e56b3e9b0395"
+    },
+    {
+      "account_id": "63366cb93ac41ebde76ca52d",
+      "display_name": "Yohanes Marthin Hutabarat",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/63366cb93ac41ebde76ca52d"
+    },
+    {
+      "account_id": "625d19ec9e7c190069e5e98f",
+      "display_name": "Jeremy Panjaitan",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625d19ec9e7c190069e5e98f"
+    },
+    {
+      "account_id": "62f0d08d25abc07e51c73a64",
+      "display_name": "Ian Prawira",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62f0d08d25abc07e51c73a64"
+    },
+    {
+      "account_id": "625d19eb9e7c190069e5e98e",
+      "display_name": "Inas Istiqlaliyyah",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625d19eb9e7c190069e5e98e"
+    },
+    {
+      "account_id": "61dd0e5b8534980073059fcf",
+      "display_name": "Micky Kurniawan",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/61dd0e5b8534980073059fcf"
+    },
+    {
+      "account_id": "712020:3e91619c-e90e-43c8-a5e7-7f1760552a7c",
+      "display_name": "Adreani Theresia Manalu",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:3e91619c-e90e-43c8-a5e7-7f1760552a7c"
+    },
+    {
+      "account_id": "6315cdd1d8850343ef594f50",
+      "display_name": "Philip Handy",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/6315cdd1d8850343ef594f50"
+    },
+    {
+      "account_id": "625d19213b1ee3006b18b9a9",
+      "display_name": "Ervina Chandra",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625d19213b1ee3006b18b9a9"
+    },
+    {
+      "account_id": "712020:827cd01d-2a1b-4a7c-8520-1c4a77334b18",
+      "display_name": "Joshua Galilea (Nano)",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:827cd01d-2a1b-4a7c-8520-1c4a77334b18"
+    },
+    {
+      "account_id": "642a7d2b80f8c2b1220fb9da",
+      "display_name": "Kevin Nathaniel",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/642a7d2b80f8c2b1220fb9da"
+    },
+    {
+      "account_id": "6182156df485cd00682763bc",
+      "display_name": "Harry Andriyan",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/6182156df485cd00682763bc"
+    },
+    {
+      "account_id": "712020:669da6f6-296f-4fd0-b73e-14ac521d2c44",
+      "display_name": "Maulana Iskak",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:669da6f6-296f-4fd0-b73e-14ac521d2c44"
+    },
+    {
+      "account_id": "62bbf9c0174792b4ae093ac5",
+      "display_name": "Edria",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62bbf9c0174792b4ae093ac5"
+    },
+    {
+      "account_id": "625d19ed7be65e0069330235",
+      "display_name": "Pandu Timur Bhaskara",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625d19ed7be65e0069330235"
+    },
+    {
+      "account_id": "62cbefcdafe495359d9d24f5",
+      "display_name": "Wilson",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62cbefcdafe495359d9d24f5"
+    },
+    {
+      "account_id": "6343a7a57d10ef791491fe74",
+      "display_name": "Daffa Nauf",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/6343a7a57d10ef791491fe74"
+    },
+    {
+      "account_id": "625cfd18efc8a5006a54180d",
+      "display_name": "Muhamad Fahmi Sidik",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625cfd18efc8a5006a54180d"
+    },
+    {
+      "account_id": "712020:8acee559-2b9c-49d0-987c-3df8a142d837",
+      "display_name": "Raymond Chrisandy Runtuwene (Unlicensed)",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:8acee559-2b9c-49d0-987c-3df8a142d837"
+    },
+    {
+      "account_id": "61ad6c68c75da8007239a6db",
+      "display_name": "Yunifa Wirman",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/61ad6c68c75da8007239a6db"
+    },
+    {
+      "account_id": "633b97b67f85f16777a190ae",
+      "display_name": "Fildzi Nurhayati Ninuk Anriti",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/633b97b67f85f16777a190ae"
+    },
+    {
+      "account_id": "712020:100af469-e16d-4ef4-9f4f-c6d83cf4f155",
+      "display_name": "Amsal Marulitua Sianipar (Unlicensed)",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:100af469-e16d-4ef4-9f4f-c6d83cf4f155"
+    },
+    {
+      "account_id": "61d50a1fa54af900697331e1",
+      "display_name": "Ricky",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/61d50a1fa54af900697331e1"
+    },
+    {
+      "account_id": "625e2dd1ab7a1800708ab287",
+      "display_name": "Muhammad Fajarrizky",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625e2dd1ab7a1800708ab287"
+    },
+    {
+      "account_id": "625e261e436629006f72a5fa",
+      "display_name": "Randu Aditara",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/625e261e436629006f72a5fa"
+    },
+    {
+      "account_id": "6360d376fc0cc7a600b01939",
+      "display_name": "hamid",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/6360d376fc0cc7a600b01939"
+    },
+    {
+      "account_id": "628b6852b1594d006907367d",
+      "display_name": "Ridlo",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/628b6852b1594d006907367d"
+    },
+    {
+      "account_id": "633a524ba84c7f79c3887721",
+      "display_name": "William",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/633a524ba84c7f79c3887721"
+    },
+    {
+      "account_id": "62f08557da8620d533940a4c",
+      "display_name": "Noni Marine Nindya",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62f08557da8620d533940a4c"
+    },
+    {
+      "account_id": "63a95faed3aeefa40541dcea",
+      "display_name": "Reja Nugraha",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/63a95faed3aeefa40541dcea"
+    },
+    {
+      "account_id": "712020:3facee09-563d-4de9-bdb8-6ad8e1d2cc6d",
+      "display_name": "Amadeus Daniel Utomo",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:3facee09-563d-4de9-bdb8-6ad8e1d2cc6d"
+    },
+    {
+      "account_id": "712020:7d378425-821b-41bd-becc-808652368300",
+      "display_name": "Kemal Roushdy Jenie",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/712020:7d378425-821b-41bd-becc-808652368300"
+    },
+    {
+      "account_id": "640832819ce2cd2c24109f28",
+      "display_name": "Leonardo.caprio",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/640832819ce2cd2c24109f28"
+    },
+    {
+      "account_id": "61e1557ae67ea2006b578f2f",
+      "display_name": "Michael Ansjory",
+      "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/61e1557ae67ea2006b578f2f"
+    }
+  ],
+  "asset_links": [
+    {
+      "id": "att1143537758",
+      "title": "ok.drawio (3).png",
+      "type": "attachment",
+      "size": 86305,
+      "mimetype": "image/png",
+      "download_url": "https://nano-vest.atlassian.net/wiki/download/attachments/1100808193/ok.drawio%20(3).png?version=1&modificationDate=1747384072787&cacheVersion=1&api=v2",
+      "drive_url": "https://drive.google.com/file/d/1gcirJXOlJ1n-dvPr8r2FQj5WKWSF8J10/view"
+    }
+  ],
+  "extracted_at": "2025-07-02T13:10:04.202243",
+  "content_length": 75919,
+  "word_count": 7351
+}

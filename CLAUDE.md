@@ -138,6 +138,11 @@ make test-be             # Backend tests only
 
 @PRPs/ai_docs/ARCHITECTURE.md
 
+**Brownfield Architecture**:
+- Complete doc: docs/bmad/brownfield-architecture.md
+- Sharded docs: @docs/bmad/brownfield-architecture/ (15 focused sections with index)
+- Current system state + future Confluence integration architecture
+
 #### TanStack Query Implementation
 
 For architecture and file references:
@@ -159,6 +164,13 @@ See implementation examples:
 - Custom exceptions: `python/src/server/exceptions.py`
 - Exception handlers: `python/src/server/main.py` (search for @app.exception_handler)
 - Service error handling: `python/src/server/services/` (various services)
+
+## Confluence RAG Integration (Planned)
+
+**Implementation Guide**: docs/bmad/CONFLUENCE_RAG_INTEGRATION.md - Hybrid schema, CQL-based sync, 90% code reuse
+**PRD**: docs/bmad/brownfield-prd.md - Full requirements, 21 stories across 5 epics
+**PRD (Sharded docs)**: @docs/bmad/brownfield-prd/ (12 focused sections with index)
+**PO Validation**: @docs/bmad/PO-VALIDATION-DELIVERABLES-SUMMARY.md - Approved architecture with security audit
 
 ## ETag Implementation
 

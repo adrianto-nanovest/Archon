@@ -1,0 +1,188 @@
+name: Test Suite
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  backend-tests:
+    name: Backend Tests (Python 3.12)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: archon_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd python
+          uv sync --group all
+
+      - name: Run Ruff linter
+        run: |
+          cd python
+          uv run ruff check src/ tests/
+
+      - name: Run MyPy type checker
+        run: |
+          cd python
+          uv run mypy src/ --ignore-missing-imports
+
+      - name: Run Pytest
+        env:
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL || 'http://localhost:5432' }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.TEST_SUPABASE_KEY || 'test-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-key' }}
+        run: |
+          cd python
+          uv run pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./python/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  frontend-tests:
+    name: Frontend Tests (Node 20)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: archon-ui-main/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd archon-ui-main
+          npm ci
+
+      - name: Run Biome linter (features/ only)
+        run: |
+          cd archon-ui-main
+          npm run biome
+
+      - name: Run ESLint (legacy code)
+        run: |
+          cd archon-ui-main
+          npm run lint
+
+      - name: Run TypeScript type check
+        run: |
+          cd archon-ui-main
+          npx tsc --noEmit
+
+      - name: Run Vitest
+        run: |
+          cd archon-ui-main
+          npm run test:coverage:stream
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./archon-ui-main/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+  integration-tests:
+    name: Integration Tests (Full Stack)
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start services with Docker Compose
+        run: |
+          docker compose up -d --build
+          sleep 30  # Wait for services to be ready
+
+      - name: Check service health
+        run: |
+          curl -f http://localhost:8181/health || exit 1
+          curl -f http://localhost:8051/health || exit 1
+
+      - name: Run integration tests
+        run: |
+          cd python
+          uv run pytest tests/integration/ -v
+
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install pip-audit
+        run: uv tool install pip-audit
+
+      - name: Run pip-audit on Python dependencies
+        run: |
+          cd python
+          uv pip freeze | uv tool run pip-audit --stdin
+
+      - name: Run npm audit on frontend dependencies
+        run: |
+          cd archon-ui-main
+          npm audit --audit-level=moderate
+
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, integration-tests, security-audit]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.backend-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.security-audit.result }}" != "success" ]; then
+            echo "One or more test suites failed"
+            exit 1
+          fi
+          echo "All tests passed successfully!"

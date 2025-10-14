@@ -1,0 +1,86 @@
+{
+  "page_id": "155254944",
+  "title": "New JIRA Workflow",
+  "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/155254944/New+JIRA+Workflow",
+  "space_key": "NANOVEST",
+  "space_id": 294913,
+  "version": 13,
+  "parent": {
+    "id": "122323582",
+    "title": "Nanovest Business Process & Agility Improvements",
+    "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/122323582/Nanovest+Business+Process+Agility+Improvements"
+  },
+  "children": [
+    {
+      "id": "115540783",
+      "title": "Old Jira Workflow (NOT USED in PODS)",
+      "url": "https://nano-vest.atlassian.net/wiki/spaces/NANOVEST/pages/115540783/Old+Jira+Workflow+NOT+USED+in+PODS"
+    }
+  ],
+  "created_by": {
+    "account_id": "62a83960bfade20069646ff2",
+    "display_name": "Adrianto Tedjokusumo",
+    "email": "adrianto@nanovest.io",
+    "profile_url": "https://nano-vest.atlassian.net/wiki/wiki/people/62a83960bfade20069646ff2"
+  },
+  "created_at": "2022-11-22T03:30:33.521Z",
+  "last_updated_at": "2023-10-24T05:53:06.347Z",
+  "external_links": [
+    {
+      "title": "https://drive.google.com/file/d/1OU6hlSwpDZAj7NQALPm9FQG3_XE_igDy/view?usp=share_link",
+      "url": "https://drive.google.com/file/d/1OU6hlSwpDZAj7NQALPm9FQG3_XE_igDy/view?usp=share_link"
+    },
+    {
+      "title": "https://drive.google.com/file/d/1Hs81klw5SRVhonFuKvaUO9ff6mB4ZkMq/view?usp=share_link",
+      "url": "https://drive.google.com/file/d/1Hs81klw5SRVhonFuKvaUO9ff6mB4ZkMq/view?usp=share_link"
+    },
+    {
+      "title": "https://drive.google.com/file/d/1xmNB7dIfB3HxENoFdk5rmDefaaNMKx0m/view?usp=share_link",
+      "url": "https://drive.google.com/file/d/1xmNB7dIfB3HxENoFdk5rmDefaaNMKx0m/view?usp=share_link"
+    }
+  ],
+  "internal_links": [],
+  "jira_issue_links": [],
+  "user_mentions": [],
+  "asset_links": [
+    {
+      "id": "att168264665",
+      "title": "image-20221220-034709.png",
+      "type": "attachment",
+      "size": 16396,
+      "mimetype": "image/png",
+      "download_url": "https://nano-vest.atlassian.net/wiki/download/attachments/155254944/image-20221220-034709.png?version=1&modificationDate=1671508025105&cacheVersion=1&api=v2",
+      "drive_url": "https://drive.google.com/file/d/1FI-6MiplvH3OkX7_9HylSju8UNyyztS2/view"
+    },
+    {
+      "id": "att165937811",
+      "title": "image-20221214-150214.png",
+      "type": "attachment",
+      "size": 24909,
+      "mimetype": "image/png",
+      "download_url": "https://nano-vest.atlassian.net/wiki/download/attachments/155254944/image-20221214-150214.png?version=1&modificationDate=1671030130005&cacheVersion=1&api=v2",
+      "drive_url": "https://drive.google.com/file/d/1gxD_xSBuTDqEzfVKxhNhxw3AXunUsbqj/view"
+    },
+    {
+      "id": "att169836600",
+      "title": "image-20221220-034551.png",
+      "type": "attachment",
+      "size": 13442,
+      "mimetype": "image/png",
+      "download_url": "https://nano-vest.atlassian.net/wiki/download/attachments/155254944/image-20221220-034551.png?version=1&modificationDate=1671507946085&cacheVersion=1&api=v2",
+      "drive_url": "https://drive.google.com/file/d/12KZj2NcRs780Jw3-ETGMOs3oajoekPso/view"
+    },
+    {
+      "id": "att165937803",
+      "title": "image-20221214-150104.png",
+      "type": "attachment",
+      "size": 33560,
+      "mimetype": "image/png",
+      "download_url": "https://nano-vest.atlassian.net/wiki/download/attachments/155254944/image-20221214-150104.png?version=1&modificationDate=1671030059646&cacheVersion=1&api=v2",
+      "drive_url": "https://drive.google.com/file/d/1k6mHDeW_jkDaWAgYIpiP7pwUngC5ViY0/view"
+    }
+  ],
+  "extracted_at": "2025-07-03T16:32:54.864645",
+  "content_length": 3347,
+  "word_count": 473
+}

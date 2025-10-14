@@ -403,7 +403,7 @@ commands:
   - create-prd: run task create-doc.md with template prd-tmpl.yaml
   - create-story: Create user story from requirements (task brownfield-create-story)
   - doc-out: Output full document to current destination file
-  - shard-prd: run the task shard-doc.md for the provided prd.md (ask if not found)
+  - shard-prd: run the task shard-doc.md for the provided brownfield-prd.md (ask if not found)
   - yolo: Toggle Yolo Mode
   - exit: Exit (confirm)
 dependencies:

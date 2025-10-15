@@ -19,7 +19,7 @@ To identify the next logical story based on project progress and epic definition
 #### 1.1 Locate Epic Files and Review Existing Stories
 
 - Based on `prdSharded` from config, locate epic files (sharded location/pattern or monolithic PRD sections)
-- If `devStoryLocation` has story files, load the highest `{epicNum}.{storyNum}.story.md` file
+- If `devStoryLocation` has story files, load the highest `{epicNum}.{storyNum}.{storyName}.md` file
 - **If highest story exists:**
   - Verify status is 'Done'. If not, alert user: "ALERT: Found incomplete story! File: {lastEpicNum}.{lastStoryNum}.story.md Status: [current status] You should fix this story first, but would you like to accept risk & override to create the next story in draft?"
   - If proceeding, select next sequential story in the current epic
@@ -106,7 +106,7 @@ ALWAYS cite source documents: `[Source: architecture/{filename}.md#{section}]`
 - Update status to "Draft" and save the story file
 - Execute `.bmad-core/tasks/execute-checklist` `.bmad-core/checklists/story-draft-checklist`
 - Provide summary to user including:
-  - Story created: `{devStoryLocation}/{epicNum}.{storyNum}.story.md`
+  - Story created: `{devStoryLocation}/{epicNum}.{storyNum}.{storyName}.md`
   - Status: Draft
   - Key technical components included from architecture docs
   - Any deviations or conflicts noted between epic and architecture

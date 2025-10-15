@@ -207,8 +207,32 @@ SUPABASE_URL=https://your-project.supabase.co  # Or http://host.docker.internal:
 SUPABASE_SERVICE_KEY=your-service-key-here      # Use legacy key format for cloud Supabase
 ```
 
+### Confluence Integration (Optional)
+
+Confluence Cloud integration is optional and can be configured via environment variables or the Settings API:
+
+```bash
+# Confluence Integration (Optional - required for Confluence sync)
+CONFLUENCE_BASE_URL=https://your-company.atlassian.net/wiki  # Your Confluence Cloud URL
+CONFLUENCE_API_TOKEN=your-api-token-here                      # Generate at https://id.atlassian.com/manage-profile/security/api-tokens
+CONFLUENCE_EMAIL=your-email@company.com                       # Your Atlassian account email
+```
+
+**Configuration Notes:**
+- All three variables are optional at startup - Archon will run without Confluence configured
+- Variables can be set via Settings UI as an alternative to `.env` file
+- API token is stored encrypted (Fernet symmetric encryption) in `archon_settings` table
+- Confluence URL must use HTTPS (required for Confluence Cloud)
+- Base URL should not include space paths (e.g., `/spaces/DEVDOCS`) - base URL only
+
+**Security:**
+- API tokens are encrypted using Fernet encryption before storage
+- Tokens are never logged or exposed in error messages
+- Encryption handled by `credential_service.py`
+- API endpoint: `POST /api/credentials` with `is_encrypted=true`
+
 Optional variables and full configuration:
-See `python/.env.example` for complete list
+See `.env.example` for complete list
 
 ## Common Development Tasks
 

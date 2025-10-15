@@ -43,6 +43,9 @@ server = [
     # Database and storage
     "supabase==2.15.1",
     "asyncpg>=0.29.0",
+    # Confluence integration
+    "atlassian-python-api>=3.41.0",
+    "markdownify>=0.11.0",
     # AI/ML libraries
     "openai==1.71.0",
     # Document processing
@@ -107,6 +110,8 @@ all = [
     "crawl4ai==0.6.2",
     "supabase==2.15.1",
     "asyncpg>=0.29.0",
+    "atlassian-python-api>=3.41.0",
+    "markdownify>=0.11.0",
     "openai==1.71.0",
     "pypdf2>=3.0.1",
     "pdfplumber>=0.11.6",

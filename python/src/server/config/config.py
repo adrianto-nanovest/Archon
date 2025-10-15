@@ -26,6 +26,13 @@ class EnvironmentConfig:
     openai_api_key: str | None = None
     host: str = "0.0.0.0"
     transport: str = "sse"
+    # Confluence integration (optional) - can be set via Settings API
+    # API token will be stored encrypted in archon_settings table using Fernet encryption
+    # Setting key: confluence_api_token with is_encrypted=TRUE
+    # Encryption handled by credential_service (see services/credential_service.py)
+    confluence_base_url: str | None = None
+    confluence_api_token: str | None = None
+    confluence_email: str | None = None
 
 
 @dataclass
@@ -135,6 +142,53 @@ def validate_supabase_url(url: str) -> bool:
     return True
 
 
+def validate_confluence_url(url: str) -> bool:
+    """Validate Confluence URL format.
+
+    Confluence Cloud requires HTTPS. Validates URL format and protocol.
+
+    Args:
+        url: The Confluence base URL to validate
+
+    Returns:
+        True if URL is valid
+
+    Raises:
+        ConfigurationError: If URL is invalid or doesn't use HTTPS
+    """
+    if not url:
+        raise ConfigurationError("Confluence URL cannot be empty")
+
+    parsed = urlparse(url)
+
+    # Confluence Cloud requires HTTPS
+    if parsed.scheme != "https":
+        raise ConfigurationError(
+            f"Invalid CONFLUENCE_BASE_URL: must use HTTPS "
+            f"(e.g., https://company.atlassian.net/wiki). Got: {url}"
+        )
+
+    # Validate URL has a network location (domain)
+    if not parsed.netloc:
+        raise ConfigurationError(
+            f"Invalid CONFLUENCE_BASE_URL: must be a valid URL "
+            f"(e.g., https://company.atlassian.net/wiki). Got: {url}"
+        )
+
+    # Check for common Confluence Cloud patterns or custom domains
+    hostname = parsed.hostname or ""
+    is_atlassian_cloud = ".atlassian.net" in hostname
+    is_custom_domain = not is_atlassian_cloud and len(hostname) > 0
+
+    if not (is_atlassian_cloud or is_custom_domain):
+        raise ConfigurationError(
+            f"Invalid CONFLUENCE_BASE_URL: must be an Atlassian Cloud URL "
+            f"(.atlassian.net) or a custom domain. Got: {url}"
+        )
+
+    return True
+
+
 def load_environment_config() -> EnvironmentConfig:
     """Load and validate environment configuration."""
     # OpenAI API key is optional at startup - can be set via API
@@ -202,6 +256,15 @@ def load_environment_config() -> EnvironmentConfig:
     except ValueError as e:
         raise ConfigurationError(f"PORT must be a valid integer, got: {port_str}") from e
 
+    # Confluence integration (optional) - can be set via Settings API
+    confluence_base_url = os.getenv("CONFLUENCE_BASE_URL")
+    confluence_api_token = os.getenv("CONFLUENCE_API_TOKEN")
+    confluence_email = os.getenv("CONFLUENCE_EMAIL")
+
+    # Validate Confluence URL if provided
+    if confluence_base_url:
+        validate_confluence_url(confluence_base_url)
+
     return EnvironmentConfig(
         openai_api_key=openai_api_key,
         supabase_url=supabase_url,
@@ -209,6 +272,9 @@ def load_environment_config() -> EnvironmentConfig:
         host=host,
         port=port,
         transport=transport,
+        confluence_base_url=confluence_base_url,
+        confluence_api_token=confluence_api_token,
+        confluence_email=confluence_email,
     )
 
 

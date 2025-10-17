@@ -1,4 +1,4 @@
-# Epic 5: Testing, Performance & Documentation
+# Epic 6: Testing, Performance & Documentation
 
 **Epic Goal**: Validate integration with comprehensive testing, optimize performance for 4000+ pages, and update documentation
 
@@ -7,7 +7,7 @@
 - Validate all existing functionality remains intact
 - Update brownfield architecture documentation
 
-## Story 5.1: Implement Backend Integration Tests
+## Story 6.1: Implement Backend Integration Tests
 
 As a **QA engineer**,
 I want **to create comprehensive integration tests for Confluence sync and search**,
@@ -28,7 +28,7 @@ so that **all critical paths are validated before production deployment**.
 - IV2: CASCADE DELETE test verifies complete cleanup of pages and chunks
 - IV3: Concurrent sync test validates no race conditions in chunk updates
 
-## Story 5.2: Implement Frontend Component Tests
+## Story 6.2: Implement Frontend Component Tests
 
 As a **QA engineer**,
 I want **to create Vitest tests for Confluence UI components**,
@@ -48,7 +48,7 @@ so that **user interactions and data flows are validated**.
 - IV2: Query pattern tests validate correct stale times and key factories
 - IV3: Existing feature tests (knowledge, projects) still pass
 
-## Story 5.3: Perform Load Testing and Optimization
+## Story 6.3: Perform Load Testing and Optimization
 
 As a **performance engineer**,
 I want **to load test Confluence sync with 4000+ pages and optimize bottlenecks**,
@@ -68,7 +68,7 @@ so that **performance requirements (15min sync, <500ms search) are met**.
 - IV2: Database connection pool handles concurrent sync + search load
 - IV3: Frontend renders 4000+ source pages list with pagination (no UI lag)
 
-## Story 5.4: Update Documentation and Architecture Docs
+## Story 6.4: Update Documentation and Architecture Docs
 
 As a **technical writer**,
 I want **to update brownfield architecture and CLAUDE.md with Confluence integration details**,
@@ -88,7 +88,7 @@ so that **future developers have accurate system documentation**.
 - IV2: New developer can follow CLAUDE.md to understand Confluence feature structure
 - IV3: Migration instructions tested on fresh database (successful upgrade path)
 
-## Story 5.5: User Communication and Training Materials
+## Story 6.5: User Communication and Training Materials
 
 As a **product manager**,
 I want **to create user-facing documentation, changelog, and training materials for Confluence integration**,

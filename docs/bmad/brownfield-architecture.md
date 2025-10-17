@@ -1176,7 +1176,7 @@ All comprehensive planning completed - ready for implementation!
   - Comparison of 3 database schema options
   - Why Hybrid Schema was selected
 
-- **Example Metadata:** `docs/bmad/conf_metadata_example_*.json`
+- **Example Metadata:** `docs/bmad/examples/conf_metadata_example_*.json`
   - Real Confluence page metadata samples
 
 ---

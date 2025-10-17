@@ -17,10 +17,13 @@ Example expand parameters:
 
 import asyncio
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from atlassian import Confluence
+
+from .confluence_validator import validate_space_key
 
 T = TypeVar("T")
 
@@ -100,6 +103,7 @@ class ConfluenceClient:
             List of page dictionaries with requested expanded fields
 
         Raises:
+            ValueError: If CQL contains invalid space key (CQL injection prevention)
             ConfluenceAuthError: If authentication fails (401)
             ConfluenceRateLimitError: If rate limit exceeded after retries (429)
             ConfluenceNotFoundError: If space or resource not found (404)
@@ -111,6 +115,13 @@ class ConfluenceClient:
             ...     limit=500
             ... )
         """
+        # Extract and validate space key from CQL to prevent CQL injection
+        # Pattern captures everything up to next whitespace or CQL keyword
+        space_match = re.search(r"space\s*=\s*['\"]?(\S+?)['\"]?(?:\s|$)", cql, re.IGNORECASE)
+        if space_match:
+            space_key = space_match.group(1)  # Extract space key value (including special chars to detect attacks)
+            validate_space_key(space_key)  # Raises ValueError if invalid (lowercase, special chars, SQL injection)
+
         logger.debug("CQL search", extra={"cql": cql, "expand": expand, "limit": limit})
 
         async def _search() -> list[dict[str, Any]]:
@@ -173,6 +184,7 @@ class ConfluenceClient:
             List of page ID strings
 
         Raises:
+            ValueError: If space key format is invalid (CQL injection prevention)
             ConfluenceAuthError: If authentication fails (401)
             ConfluenceRateLimitError: If rate limit exceeded after retries (429)
             ConfluenceNotFoundError: If space not found (404)
@@ -181,6 +193,9 @@ class ConfluenceClient:
             >>> page_ids = await client.get_space_pages_ids('DEVDOCS')
             >>> # Returns: ['123456', '789012', ...]
         """
+        # Validate space key to prevent CQL injection
+        validate_space_key(space_key)
+
         logger.debug("Get space page IDs", extra={"space_key": space_key})
 
         async def _get_page_ids() -> list[str]:

@@ -1,0 +1,132 @@
+# Quality Gate Decision: Story 1.5
+# Schema Version 1
+
+schema: 1
+story: "1.5"
+story_title: "Validate Existing Infrastructure for Epic 2 Integration"
+gate: CONCERNS
+status_reason: "All infrastructure validation tests pass (28/28), confirming 90% code reuse for Epic 2. However, CQL injection validation function from Story 1.4 must be integrated into production code before Epic 2 Story 2.1 implementation begins."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-16T00:00:00Z"
+
+# Waiver status (not active)
+waiver:
+  active: false
+
+# Top issues identified
+top_issues:
+  - id: "SEC-001"
+    severity: high
+    finding: "CQL injection validation function NOT integrated into production code"
+    suggested_action: "Extract validate_space_key() from tests/security/test_confluence_cql_injection.py:25-61 to python/src/server/services/confluence/confluence_validator.py before Epic 2 Story 2.1"
+    suggested_owner: "dev"
+    references:
+      - "python/tests/security/test_confluence_cql_injection.py:25-61"
+      - "docs/bmad/confluence-security-audit-checklist.md:118-138"
+  - id: "SEC-002"
+    severity: medium
+    finding: "javascript: protocol preserved in Markdown links (XSS residual risk)"
+    suggested_action: "Document residual risk; add sanitization layer if HTML rendering feature added in future"
+    suggested_owner: "dev"
+    references:
+      - "docs/bmad/confluence-security-audit-checklist.md:146-154"
+
+# Extended fields
+quality_score: 90  # 100 - (10 × 1 CONCERNS issue)
+expires: "2025-10-30T00:00:00Z"  # 2 weeks from review
+
+evidence:
+  tests_reviewed: 28
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]  # All 8 acceptance criteria validated
+    ac_gaps: []  # No coverage gaps
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: "CQL injection validation function exists in tests but NOT integrated into production code (CRITICAL). XSS residual risk documented (MEDIUM). All security tests passing (12/12 XSS, 14/14 CQL injection)."
+  performance:
+    status: PASS
+    notes: "No performance concerns. Story validates existing infrastructure only (no new code). Document storage service tested with 1000+ word documents. Hybrid search source filtering validated. Progress tracker in-memory storage confirmed."
+  reliability:
+    status: PASS
+    notes: "Atomic transaction rollback validated. CASCADE DELETE safety confirmed. Zero-downtime chunk replacement flow tested."
+  maintainability:
+    status: PASS
+    notes: "Excellent test documentation. 891 lines of well-structured test code across 8 categories. Clear Given-When-Then patterns. Mock data matches PRD schema exactly."
+
+recommendations:
+  immediate:  # Must address before Epic 2 implementation
+    - action: "Extract validate_space_key() to production module python/src/server/services/confluence/confluence_validator.py"
+      refs: ["python/tests/security/test_confluence_cql_injection.py:25-61"]
+      owner: "dev"
+      epic_blocker: true
+      story_dependency: "2.1"
+    - action: "Integrate CQL validation into API routes that accept space_key parameter (Story 3.4)"
+      refs: ["python/src/server/api_routes/confluence_api.py"]
+      owner: "dev"
+      epic_blocker: true
+      story_dependency: "3.4"
+    - action: "Create security documentation: docs/bmad/confluence-security.md (Story 1.4 deliverable)"
+      refs: ["docs/bmad/confluence-security-audit-checklist.md:278-287"]
+      owner: "dev"
+      epic_blocker: false
+      story_dependency: "1.4"
+  future:  # Can be addressed later (not Epic 2 blockers)
+    - action: "If HTML rendering feature added, implement additional sanitization layer for javascript: protocol links"
+      refs: ["docs/bmad/confluence-security-audit-checklist.md:146-154"]
+      owner: "dev"
+      epic_blocker: false
+
+# Validation summary
+validation_summary:
+  total_tests: 28
+  tests_passing: 28
+  tests_failing: 0
+  acceptance_criteria_met: 8
+  acceptance_criteria_total: 8
+  integration_verification_tests: 6
+  integration_verification_passing: 6
+  code_reuse_percentage: 90
+  infrastructure_modifications_required: 0
+
+# Decision rationale
+decision_rationale: |
+  Gate decision: CONCERNS (not FAIL or PASS)
+
+  Rationale for CONCERNS:
+  1. All 28 infrastructure validation tests pass successfully
+  2. All 8 acceptance criteria fully met
+  3. 90% code reuse confirmed - existing infrastructure ready for Epic 2
+  4. Comprehensive test coverage across 8 categories (document storage, progress tracking, JSONB metadata, atomic updates, source isolation, CASCADE DELETE, transaction rollback, ETag caching)
+  5. Integration verification tests (IV1-IV6) all passing
+
+  However:
+  - 1 CRITICAL security issue identified: CQL injection validation function from Story 1.4 exists in tests but NOT integrated into production code
+  - This is an Epic 2 blocker (must be addressed before Story 2.1 implementation)
+  - Issue severity = HIGH → Deterministic gate rule = CONCERNS
+
+  Story 1.5 itself is complete and ready for "Done" status. The CONCERNS gate reflects a dependency on Story 1.4 security deliverable integration, which must be completed before Epic 2 proceeds.
+
+# Related documents
+related_docs:
+  - path: "docs/bmad/stories/1.5.validate-existing-infrastructure-for-epic-2-integration.md"
+    type: "story_file"
+  - path: "docs/bmad/confluence-security-audit-checklist.md"
+    type: "security_audit"
+  - path: "python/tests/server/services/test_infrastructure_validation.py"
+    type: "test_file"
+  - path: "python/tests/security/test_confluence_cql_injection.py"
+    type: "security_test"
+  - path: "python/tests/security/test_confluence_xss_prevention.py"
+    type: "security_test"
+  - path: "docs/bmad/brownfield-prd/epic-2-incremental-sync-content-processing.md"
+    type: "prd"
+
+# Audit trail
+history:
+  - at: "2025-10-16T00:00:00Z"
+    gate: CONCERNS
+    note: "Initial QA review - all validation tests pass, but CQL validation function not integrated into production code (Epic 2 blocker)"
+    reviewer: "Quinn (Test Architect)"

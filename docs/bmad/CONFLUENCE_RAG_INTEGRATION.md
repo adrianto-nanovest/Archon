@@ -1278,8 +1278,8 @@ markdownify = "^0.11.6"
 - Document Storage: `python/src/server/services/storage/document_storage_service.py`
 
 ### Example Confluence Metadata
-- `docs/bmad/conf_metadata_example_1.json`
-- `docs/bmad/conf_metadata_example_2.json`
+- `docs/bmad/examples/conf_metadata_example_1.json`
+- `docs/bmad/examples/conf_metadata_example_2.json`
 
 ---
 

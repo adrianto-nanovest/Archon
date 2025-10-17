@@ -93,4 +93,28 @@ so that **no vulnerabilities are introduced into the existing system**.
 - Test: Authentication bypass on `/api/confluence/*` endpoints
 - Test: Oversized page handling (75KB+ HTML)
 
+## Story 1.5: Validate Existing Infrastructure for Epic 2 Integration
+
+As a **backend developer**,
+I want **to verify existing document processing infrastructure can handle Confluence content**,
+so that **Epic 2 implementation can proceed without infrastructure modifications**.
+
+**Acceptance Criteria**:
+1. Verify `document_storage_service.add_documents_to_supabase()` accepts Markdown input and returns chunk IDs
+2. Confirm `ProgressTracker` supports custom operation types (e.g., "confluence_sync")
+3. Validate `archon_crawled_pages` table schema supports JSONB metadata field with nested structures
+4. Test chunk replacement flow with mock Confluence data (create → mark pending deletion → replace → delete)
+5. Verify search queries correctly filter chunks by source_id (no cross-source pollution)
+6. Confirm CASCADE DELETE works for source deletion (removes all pages and chunks)
+7. Test atomic transaction rollback for failed chunk updates (old chunks remain searchable)
+8. Validate ETag caching pattern works with Confluence API endpoints
+
+**Integration Verification**:
+- IV1: `document_storage_service` successfully chunks 1000+ word Markdown document with code blocks and tables
+- IV2: `ProgressTracker` updates visible in `/api/progress/active` endpoint with custom metadata
+- IV3: Mock Confluence metadata (JIRA links, mentions, page links) stored in `archon_crawled_pages.metadata` JSONB column
+- IV4: Search results correctly isolated by source_id (create 2 sources, verify no cross-contamination)
+- IV5: Source deletion removes all dependent records (verify CASCADE to confluence_pages and chunks)
+- IV6: Failed chunk update transaction rolls back cleanly (old chunks still searchable, no orphaned data)
+
 ---

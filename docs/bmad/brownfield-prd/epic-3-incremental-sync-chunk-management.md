@@ -1,33 +1,16 @@
-# Epic 2: Incremental Sync & Content Processing
+# Epic 3: Incremental Sync & Chunk Management
 
-**Epic Goal**: Implement CQL-based incremental sync, HTML to Markdown conversion, and chunk storage reusing existing document processing infrastructure
+**Epic Goal**: Implement CQL-based incremental sync, atomic chunk updates, and deletion detection strategies reusing existing document processing infrastructure
+
+**Note**: HTML to Markdown processing moved to Epic 2 (dedicated epic for content processing architecture)
 
 **Integration Requirements**:
-- Must call existing `document_storage_service.add_documents_to_supabase()` for chunking
+- Must call existing `document_storage_service.add_documents_to_supabase()` for chunking (validated in Story 1.5)
+- Must use `ConfluenceProcessor` from Epic 2 for HTML→Markdown conversion
 - Must use existing `ProgressTracker` for sync status updates
 - Atomic chunk updates ensure zero-downtime (old chunks searchable during replacement)
 
-## Story 2.1: Implement HTML to Markdown Processor
-
-As a **backend developer**,
-I want **to create `ConfluenceProcessor` for converting Confluence HTML to Markdown**,
-so that **Confluence content can be chunked and embedded using existing infrastructure**.
-
-**Acceptance Criteria**:
-1. File `python/src/server/services/confluence/confluence_processor.py` created
-2. Method `async def html_to_markdown(html: str, page_id: str)` converts storage format HTML to Markdown
-3. Preserves code blocks with language tags (```python, ```java, etc.)
-4. Preserves tables using Markdown table syntax
-5. Extracts metadata: JIRA issue links, user mentions, internal page links, external links, asset attachments
-6. Returns tuple: (markdown_content: str, metadata: dict)
-7. Handles malformed HTML gracefully with error logging
-
-**Integration Verification**:
-- IV1: Code blocks from Confluence remain intact after conversion (no line breaks mid-block)
-- IV2: JIRA link extraction matches pattern: `[A-Z]+-\d+` (e.g., PROJ-123)
-- IV3: Metadata JSONB structure matches `confluence_pages.metadata` schema
-
-## Story 2.2: Implement CQL-Based Incremental Sync Service
+## Story 3.1: Implement CQL-Based Incremental Sync Service
 
 As a **backend developer**,
 I want **to create `ConfluenceSyncService` with CQL-based incremental sync logic**,
@@ -47,7 +30,7 @@ so that **only modified pages are fetched and processed, minimizing API calls**.
 - IV2: Existing `document_storage_service.add_documents_to_supabase()` successfully chunks Confluence markdown
 - IV3: Sync metrics stored in `archon_sources.metadata->>'sync_metrics'` JSONB field
 
-## Story 2.3: Implement Atomic Chunk Update Strategy
+## Story 3.2: Implement Atomic Chunk Update Strategy
 
 As a **backend developer**,
 I want **to implement zero-downtime chunk replacement with atomic updates**,
@@ -66,7 +49,7 @@ so that **Confluence content remains searchable during sync updates without gaps
 - IV2: Failed sync rollback preserves old chunks (content still searchable)
 - IV3: Successful sync removes old chunks completely (no orphaned data)
 
-## Story 2.4: Implement Deletion Detection Strategies
+## Story 3.3: Implement Deletion Detection Strategies
 
 As a **backend developer**,
 I want **to support configurable deletion detection strategies (weekly, every sync, on-demand)**,
@@ -85,7 +68,7 @@ so that **deleted Confluence pages are removed from RAG system without excessive
 - IV2: Every_sync strategy detects deletions immediately (within one sync cycle)
 - IV3: Deleted page chunks removed from search results after deletion detection
 
-## Story 2.5: Create Confluence API Endpoints
+## Story 3.4: Create Confluence API Endpoints
 
 As a **backend developer**,
 I want **to create REST API endpoints for Confluence source management and sync**,

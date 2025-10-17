@@ -1,4 +1,4 @@
-# Epic 4: Frontend UI & User Experience
+# Epic 5: Frontend UI & User Experience
 
 **Epic Goal**: Implement Confluence source management UI with sync monitoring, following vertical slice architecture and existing design patterns
 
@@ -7,7 +7,7 @@
 - Reuse Radix UI primitives and Tron-inspired styling
 - Integrate with existing Knowledge Base page layout
 
-## Story 4.1: Create Confluence Vertical Slice Foundation
+## Story 5.1: Create Confluence Vertical Slice Foundation
 
 As a **frontend developer**,
 I want **to create the `features/confluence/` directory structure with services, hooks, types**,
@@ -26,7 +26,7 @@ so that **Confluence UI follows established vertical slice architecture**.
 - IV2: Service client uses shared `apiClient.ts` with ETag support
 - IV3: Types match backend API response schemas exactly
 
-## Story 4.2: Implement Confluence Source Management UI
+## Story 5.2: Implement Confluence Source Management UI
 
 As a **frontend developer**,
 I want **to create Confluence tab in Knowledge page with source cards and creation modal**,
@@ -46,7 +46,7 @@ so that **users can create, view, and manage Confluence sources**.
 - IV2: Optimistic update shows new source immediately, replaced with server data on success
 - IV3: Deletion confirmation dialog matches existing pattern from other features
 
-## Story 4.3: Implement Sync Status and Progress Monitoring
+## Story 5.3: Implement Sync Status and Progress Monitoring
 
 As a **frontend developer**,
 I want **to create sync status display with real-time progress updates**,
@@ -66,7 +66,7 @@ so that **users can monitor Confluence sync operations**.
 - IV2: Smart polling pauses when browser tab hidden (visibility-aware)
 - IV3: Error handling follows existing toast notification pattern
 
-## Story 4.4: Enhance Search UI with Confluence Filters
+## Story 5.4: Enhance Search UI with Confluence Filters
 
 As a **frontend developer**,
 I want **to add Confluence-specific filters to search sidebar and metadata to result cards**,

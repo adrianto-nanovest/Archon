@@ -1,4 +1,4 @@
-# Epic 3: Metadata-Enhanced Search Integration
+# Epic 4: Metadata-Enhanced Search Integration
 
 **Epic Goal**: Enhance hybrid search with Confluence metadata enrichment enabling space, JIRA, hierarchy, and mention filters
 
@@ -7,7 +7,7 @@
 - Add Confluence-specific filter parameters to search API
 - Maintain existing search performance (<500ms response time)
 
-## Story 3.1: Enhance Hybrid Search with Metadata JOIN
+## Story 4.1: Enhance Hybrid Search with Metadata JOIN
 
 As a **backend developer**,
 I want **to modify `hybrid_search_strategy.py` to JOIN confluence_pages for metadata enrichment**,
@@ -26,7 +26,7 @@ so that **search results include Confluence-specific metadata (space, JIRA links
 - IV2: Web crawl and document upload search results unaffected (null metadata)
 - IV3: EXPLAIN shows index usage on confluence_pages.page_id (no seq scan)
 
-## Story 3.2: Implement Confluence-Specific Search Filters
+## Story 4.2: Implement Confluence-Specific Search Filters
 
 As a **backend developer**,
 I want **to add filter parameters to search API for space, JIRA, hierarchy, and mentions**,
@@ -45,7 +45,7 @@ so that **users can narrow search results using Confluence metadata**.
 - IV2: JIRA filter correctly identifies pages linking to specific issues
 - IV3: Hierarchy filter shows all descendants of specified parent page
 
-## Story 3.3: Add Search Performance Optimization
+## Story 4.3: Add Search Performance Optimization
 
 As a **backend developer**,
 I want **to optimize search queries with composite indexes and query tuning**,

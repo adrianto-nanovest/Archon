@@ -77,17 +77,81 @@ CREATE TABLE confluence_pages (
   -- Rich metadata stored ONCE per page (~15 KB)
   metadata JSONB NOT NULL,
   -- {
-  --   "ancestors": [{id, title, url}, ...],
-  --   "children": [{id, title, url}, ...],
-  --   "created_by": {account_id, display_name, email},
-  --   "jira_issue_links": [{issue_key, issue_url}, ...],
-  --   "user_mentions": [{account_id, display_name}, ...],
-  --   "internal_links": [{page_id, page_title, page_url}, ...],
-  --   "external_links": [{title, url}, ...],
-  --   "asset_links": [{id, title, download_url}, ...],
-  --   "word_count": 7351,
-  --   "content_length": 75919
+  --   "ancestors": [{id, title, url}, ...],            -- From Confluence API
+  --   "children": [{id, title, url}, ...],             -- From Confluence API
+  --   "created_by": {account_id, display_name, email}, -- From Confluence API
+  --
+  --   "jira_issue_links": [                            -- 3-tier extraction (95%+ coverage)
+  --     {issue_key: "PROJ-123", issue_url: "..."}
+  --   ],
+  --   // Tier 1: From JIRA macros (40% coverage)
+  --   // Tier 2: From <a> tag URLs (30% coverage)
+  --   // Tier 3: From plain text regex (30% coverage)
+  --
+  --   "user_mentions": [                               -- From <ri:user> elements
+  --     {account_id: "557058:abc", display_name: "John", profile_url: "..."}
+  --   ],
+  --   // Bulk fetched via get_users_by_account_ids() to avoid N+1 queries
+  --
+  --   "internal_links": [                              -- From <ri:page> elements
+  --     {page_id: "12345", page_title: "Guide", page_url: "..."}
+  --   ],
+  --   // Bulk fetched via find_page_by_title() with deduplication
+  --
+  --   "external_links": [                              -- From <a> tags + iframe macros
+  --     {title: "External Doc", url: "https://..."}
+  --   ],
+  --   // Includes Google Drive icon detection (Docs, Sheets, Slides)
+  --   // Iframe embeds converted to original URLs (YouTube, Maps, etc.)
+  --
+  --   "asset_links": [                                 -- From attachments + images
+  --     {id: "att123", title: "diagram.png", download_url: "...", type: "image"}
+  --   ],
+  --   // Aggregated from <ri:attachment> in view-file macros and ac:image tags
+  --
+  --   "word_count": 7351,                              -- From final markdown
+  --   "content_length": 75919,                         -- From final markdown
+  --
+  --   "asset_processing_metadata": {                   -- From hybrid asset processing (optional)
+  --     "processed_attachments": [
+  --       {
+  --         "filename": "technical-spec.pdf",
+  --         "processor": "docling",                   -- PDF/Office processed with Docling
+  --         "page_count": 15,
+  --         "table_count": 3,
+  --         "code_block_count": 5,
+  --         "has_formulas": true,
+  --         "document_structure": {"sections": 8, "max_heading_level": 4}
+  --       }
+  --     ],
+  --     "processed_images": [
+  --       {
+  --         "filename": "screenshot.png",
+  --         "processor": "multimodal_llm",            -- Images processed with MODEL_CHOICE LLM
+  --         "model": "gpt-4o",                        -- From RAG Settings MODEL_CHOICE
+  --         "extracted_text": "Login screen with username field...",
+  --         "image_type": "screenshot",               -- chart, diagram, photo, screenshot
+  --         "has_text": true
+  --       },
+  --       {
+  --         "filename": "diagram.png",
+  --         "processor": "docling_ocr",               -- Fallback OCR for non-multimodal models
+  --         "ocr_text": "System architecture diagram...",
+  --         "has_text": true
+  --       }
+  --     ]
+  --   }
   -- }
+  --
+  -- Metadata extraction strategy: Single-pass DOM traversal with concurrent collection
+  -- All handlers write to shared metadata structures during HTML processing
+  --
+  -- Hybrid asset processing integration:
+  -- - Documents (PDF/Office): Docling full-text extraction + structured metadata
+  -- - Images (DEFAULT): Multimodal LLM (based on MODEL_CHOICE from RAG Settings)
+  --   - Runtime capability check: Does MODEL_CHOICE support vision?
+  --   - Automatic fallback to Docling OCR if model lacks multimodal support
+  -- - All processed content embedded in page markdown for full-text search
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

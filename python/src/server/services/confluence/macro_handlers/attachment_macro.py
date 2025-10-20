@@ -7,7 +7,10 @@ Processes PDF/Office attachments with full-text extraction via Docling.
 import tempfile
 from pathlib import Path
 
-from bs4 import NavigableString
+# BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+# but it's available at runtime via bs4/__init__.py import from bs4.element.
+# See: https://github.com/python/typeshed/issues/4968
+from bs4 import NavigableString  # type: ignore[attr-defined]
 
 from .base import BaseMacroHandler
 
@@ -17,7 +20,13 @@ class AttachmentMacroHandler(BaseMacroHandler):
 
     DOCLING_SUPPORTED_FORMATS = {".pdf", ".docx", ".pptx", ".xlsx"}
 
-    def __init__(self, confluence_client, docling_processor, asset_links_tracker=None, settings=None):
+    def __init__(
+        self,
+        confluence_client: object | None,
+        docling_processor: object | None,
+        asset_links_tracker: list | None = None,
+        settings: object | None = None
+    ) -> None:
         super().__init__()
         self.confluence_client = confluence_client
         self.docling_processor = docling_processor
@@ -87,7 +96,7 @@ class AttachmentMacroHandler(BaseMacroHandler):
                 except Exception as e:
                     self.logger.warning(f"Failed to clean up temp file {temp_file}: {e}")
 
-    async def process(self, macro_tag, page_id, space_id=None):
+    async def process(self, macro_tag, page_id: str, space_id: str | None = None) -> None:
         """
         Process attachment macro.
 

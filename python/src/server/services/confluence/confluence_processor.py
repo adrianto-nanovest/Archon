@@ -71,6 +71,8 @@ class ConfluenceProcessor:
         self.jira_links_tracker = []
         self.asset_links_tracker = []
         self.external_links_tracker = []
+        self.internal_links_tracker = []
+        self.user_mentions_tracker = []
 
         # Import macro handlers
         from .macro_handlers.attachment_macro import AttachmentMacroHandler
@@ -113,11 +115,50 @@ class ConfluenceProcessor:
         # Set generic fallback handler for unknown macros
         self.generic_macro_handler = generic_handler
 
-        # Story 2.3 will register element handlers here
-        self.element_handlers: dict[str, object] = {}
+        # Import element handlers (Story 2.3)
+        from .element_handlers.image_handler import ImageHandler
+        from .element_handlers.link_handler import LinkHandler
+        from .element_handlers.simple_elements import SimpleElementsHandler
+        from .element_handlers.user_handler import UserHandler
+
+        # Instantiate element handlers with dependency injection (Story 2.3)
+        link_handler = LinkHandler(
+            confluence_client=self.confluence_client,
+            internal_links_tracker=self.internal_links_tracker,
+            external_links_tracker=self.external_links_tracker,
+            jira_links_tracker=self.jira_links_tracker,  # For JIRA deduplication (Tier 2)
+        )
+        user_handler = UserHandler(
+            confluence_client=self.confluence_client,
+            user_mentions_tracker=self.user_mentions_tracker,
+        )
+        image_handler = ImageHandler(
+            confluence_client=self.confluence_client,
+            docling_processor=self.docling_processor,
+            asset_links_tracker=self.asset_links_tracker,
+            settings=self.settings,
+            model_choice=getattr(self.settings, "model_choice", None) if self.settings else None,
+        )
+        simple_elements_handler = SimpleElementsHandler()
+
+        # Register element handlers in processing order (list, not dict)
+        self.element_handlers = [
+            link_handler,
+            user_handler,
+            image_handler,
+            simple_elements_handler,
+        ]
+
+        # Import table processor and metadata extractor (Story 2.4)
+        from .table_processor import TableProcessor
+        from .metadata_extractor import MetadataExtractor
+
+        # Instantiate table processor and metadata extractor (Story 2.4)
+        self.table_processor = TableProcessor()
+        self.metadata_extractor = MetadataExtractor()
 
         self.logger.info(
-            f"ConfluenceProcessor initialized with {len(self.macro_handlers)} macro handlers"
+            f"ConfluenceProcessor initialized with {len(self.macro_handlers)} macro handlers and {len(self.element_handlers)} element handlers"
         )
 
     async def html_to_markdown(
@@ -126,11 +167,12 @@ class ConfluenceProcessor:
         """
         Convert Confluence HTML to RAG-optimized Markdown.
 
-        Implements a two-pass processing pipeline:
+        Implements a three-pass processing pipeline:
         1. Pass 1: Process Confluence macros (macro expansion)
         2. Pass 2: Process special HTML elements (user mentions, links, images)
-        3. Pass 3: Convert to Markdown using markdownify
-        4. Pass 4: Extract metadata (future Story 2.4)
+        3. Pass 3: Process tables (hierarchical markdown conversion)
+        4. Pass 4: Convert to Markdown using markdownify
+        5. Pass 5: Extract metadata (JIRA, users, links, assets, content metrics)
 
         Args:
             html: Confluence Storage Format HTML
@@ -140,7 +182,7 @@ class ConfluenceProcessor:
         Returns:
             Tuple of (markdown_content, metadata_dict)
             - markdown_content: RAG-optimized Markdown string
-            - metadata_dict: Extracted metadata (empty dict for Story 2.1)
+            - metadata_dict: Extracted metadata with JIRA links, user mentions, etc.
 
         Raises:
             Exception: Only if fatal error prevents processing
@@ -157,20 +199,32 @@ class ConfluenceProcessor:
             await self._process_macros(soup, page_id, space_id)
 
             # Pass 2: Process special HTML elements
-            await self._process_special_elements(soup, space_id)
+            await self._process_special_elements(soup, page_id, space_id)
 
-            # Pass 3: Convert to Markdown
-            # Future stories will add table processing before this step
+            # Pass 3: Process tables (Story 2.4)
+            await self._process_tables(soup)
+
+            # Pass 4: Convert to Markdown
             markdown_content = markdownify.markdownify(
                 str(soup), heading_style="atx", escape_underscores=False
             )
 
-            # Pass 4: Extract metadata (future Story 2.4)
-            metadata = {}
+            # Pass 5: Extract metadata (Story 2.4)
+            metadata = self.metadata_extractor.extract_metadata(
+                jira_links_tracker=self.jira_links_tracker,
+                user_mentions_tracker=self.user_mentions_tracker,
+                internal_links_tracker=self.internal_links_tracker,
+                external_links_tracker=self.external_links_tracker,
+                asset_links_tracker=self.asset_links_tracker,
+                markdown_content=markdown_content,
+            )
 
             self.logger.info(
                 f"Completed conversion for page {page_id} "
-                f"(output: {len(markdown_content)} characters)"
+                f"(output: {len(markdown_content)} characters, "
+                f"metadata: {len(metadata.get('jira_issue_links', []))} JIRA links, "
+                f"{len(metadata.get('user_mentions', []))} user mentions, "
+                f"{len(metadata.get('asset_links', []))} assets)"
             )
 
             return markdown_content, metadata
@@ -255,7 +309,7 @@ class ConfluenceProcessor:
         )
 
     async def _process_special_elements(
-        self, soup: BeautifulSoup, space_id: str | None = None
+        self, soup: BeautifulSoup, page_id: str, space_id: str | None = None
     ) -> None:
         """
         Process special HTML elements in the document (Pass 2).
@@ -266,16 +320,14 @@ class ConfluenceProcessor:
 
         Args:
             soup: BeautifulSoup object (modified in-place)
+            page_id: Confluence page ID (for logging context and image downloads)
             space_id: Confluence space ID (optional, for link resolution)
 
         Note:
-            Story 2.3 will populate self.element_handlers with concrete implementations.
-            For Story 2.1, this method logs but performs no actual transformations.
+            Element handlers are processed in order: links, users, images, simple elements.
         """
         if not self.element_handlers:
-            self.logger.debug(
-                "No element handlers registered (will be added in Story 2.3)"
-            )
+            self.logger.debug("No element handlers registered")
             return
 
         self.logger.debug(
@@ -285,11 +337,12 @@ class ConfluenceProcessor:
         handlers_processed = 0
         handlers_failed = 0
 
-        for handler_name, handler in self.element_handlers.items():
+        for handler in self.element_handlers:
+            handler_name = handler.__class__.__name__
             try:
                 self.logger.debug(f"Running {handler_name} element handler")
-                handler.process(
-                    soup, space_id=space_id, confluence_client=self.confluence_client
+                await handler.process(
+                    soup, page_id=page_id, space_id=space_id, confluence_client=self.confluence_client
                 )
                 handlers_processed += 1
 
@@ -303,4 +356,56 @@ class ConfluenceProcessor:
         self.logger.debug(
             f"Element processing complete: "
             f"{handlers_processed} handlers succeeded, {handlers_failed} failed"
+        )
+
+    async def _process_tables(self, soup: BeautifulSoup) -> None:
+        """
+        Process tables into hierarchical markdown format (Pass 3).
+
+        Finds all <table> elements and converts them to hierarchical markdown using
+        ## Row → ### Column structure. Each table is wrapped in try-except for error
+        isolation.
+
+        Args:
+            soup: BeautifulSoup object (modified in-place)
+
+        Note:
+            Story 2.4: Tables are converted to hierarchical format optimized for RAG.
+            Standard markdown tables have critical limitations for Confluence content.
+        """
+        # Find all table elements
+        tables = soup.find_all("table")
+
+        if not tables:
+            self.logger.debug("No tables found in document")
+            return
+
+        self.logger.info(f"Processing {len(tables)} tables")
+
+        tables_processed = 0
+        tables_failed = 0
+
+        for table in tables:
+            try:
+                # Convert table to hierarchical markdown
+                hierarchical_markdown = self.table_processor.process_table(table, soup)
+
+                # Replace table element with hierarchical markdown
+                # BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+                # but it's available at runtime via bs4/__init__.py import from bs4.element.
+                # See: https://github.com/python/typeshed/issues/4968
+                from bs4 import NavigableString  # type: ignore[attr-defined]
+
+                table.replace_with(NavigableString(hierarchical_markdown))
+
+                tables_processed += 1
+
+            except Exception as e:
+                tables_failed += 1
+                self.logger.error(f"Error processing table: {e}", exc_info=True)
+                # Continue processing other tables (error isolation)
+
+        self.logger.info(
+            f"Table processing complete: "
+            f"{tables_processed} processed, {tables_failed} failed"
         )

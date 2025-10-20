@@ -34,7 +34,7 @@ async def test_youtube_embed_url_conversion(embed_handler):
 
     # Verify URL converted from /embed/ to /watch?v=
     assert "[Demo Video]" in result
-    assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ" in result
+    assert "youtube.com/watch?v=dQw4w9WgXcQ" in result
 
     # Verify tracked in external links
     assert len(embed_handler.external_links_tracker) == 1

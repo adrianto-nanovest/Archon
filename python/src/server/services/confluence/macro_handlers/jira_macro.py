@@ -4,7 +4,10 @@ JIRA Macro Handler for Confluence Storage Format.
 Implements 3-tier JIRA issue extraction strategy for maximum coverage (~100%).
 """
 
-from bs4 import NavigableString
+# BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+# but it's available at runtime via bs4/__init__.py import from bs4.element.
+# See: https://github.com/python/typeshed/issues/4968
+from bs4 import NavigableString  # type: ignore[attr-defined]
 
 from .base import BaseMacroHandler
 
@@ -17,7 +20,7 @@ class JiraMacroHandler(BaseMacroHandler):
     and Tier 3 (plain text regex) are implemented in Story 2.3 and 2.4.
     """
 
-    def __init__(self, jira_client=None, jira_links_tracker=None):
+    def __init__(self, jira_client: object | None = None, jira_links_tracker: list | None = None) -> None:
         """
         Initialize JIRA macro handler.
 
@@ -35,7 +38,7 @@ class JiraMacroHandler(BaseMacroHandler):
             link.get("issue_key") == issue_key for link in self.jira_links_tracker
         )
 
-    async def process(self, macro_tag, page_id, space_id=None):
+    async def process(self, macro_tag, page_id: str, space_id: str | None = None) -> None:
         """
         Process JIRA macro (Tier 1: Parameter extraction).
 

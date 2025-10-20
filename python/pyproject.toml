@@ -174,18 +174,29 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
+# MyPy Configuration for Type Checking
+# - Confluence service: Full type hints required (Epic 2 deliverable)
+# - BeautifulSoup4 (bs4): No type stubs - ignore missing imports
+# - Markdownify: Limited type stubs - ignore missing imports
+# Run: uv run mypy src/server/services/confluence/ --strict
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+# disallow_untyped_defs = false: Allow untyped function definitions for gradual adoption.
+# Future: Enable this after full type annotation coverage (Post-Epic 2)
+# Rationale: Brownfield codebase - prioritize critical type safety over 100% coverage
 disallow_untyped_defs = false
-disallow_any_unimported = false
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-check_untyped_defs = true
+check_untyped_defs = true       # Type-check untyped function bodies
+no_implicit_optional = true     # Require explicit Optional for None defaults
+warn_redundant_casts = true     # Warn about unnecessary casts
+warn_unused_ignores = true      # Warn about unused type: ignore comments
+strict_equality = true          # Strict equality checks (e.g., == None)
 
-# Third-party libraries often don't have type stubs
-# We'll explicitly type our own code but not fail on external libs
+[[tool.mypy.overrides]]
+module = "bs4.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "markdownify.*"
 ignore_missing_imports = true

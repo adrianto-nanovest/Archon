@@ -8,6 +8,7 @@ and implement graceful degradation to ensure processing continues on failures.
 
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
 
 from bs4 import BeautifulSoup
 
@@ -62,12 +63,12 @@ class BaseElementHandler(ABC):
         implement internal try-except for graceful degradation with placeholder content.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the handler with a logger."""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
-    def process(self, soup: BeautifulSoup, **kwargs) -> None:
+    def process(self, soup: BeautifulSoup, **kwargs: Any) -> None:
         """
         Process special HTML elements in the document.
 

@@ -297,6 +297,94 @@ so that **attachment handlers can process PDF/Office documents efficiently, and 
 
 ---
 
+## Story 2.7: Address MyPy Strict Mode Type Annotation Warnings (Technical Debt)
+
+As a **backend developer**,
+I want **to resolve MyPy strict mode type annotation warnings in the Confluence HTML processing infrastructure**,
+so that **the codebase maintains type safety standards and eliminates pre-existing warnings from Stories 2.1 and 2.2**.
+
+**Acceptance Criteria**:
+1. **Resolve NavigableString Import Warning**:
+   - BeautifulSoup4 NavigableString not explicitly exported
+   - Add `# type: ignore[import]` comment with justification
+   - Document in code: "BeautifulSoup4 doesn't explicitly export NavigableString in type stubs"
+   - Alternative: Use `from bs4.element import NavigableString` if available
+
+2. **Add Missing Return Type Annotations**:
+   - Update `BaseMacroHandler.process()` method signature
+   - Update `BaseElementHandler.process()` method signature
+   - Add return type annotations to all handler methods in base classes
+   - Format: `def process(self, soup: BeautifulSoup, ...) -> None:`
+
+3. **Fix Optional Type Annotations**:
+   - Update base class method signatures with explicit `| None` for optional parameters
+   - Pattern: Change `confluence_client: ConfluenceClient` to `confluence_client: ConfluenceClient | None`
+   - Apply to all handler base classes (macro_handlers/base.py, element_handlers/base.py)
+
+4. **Configure MyPy to Ignore Known Issues**:
+   - Add mypy configuration to `pyproject.toml`:
+     ```toml
+     [tool.mypy]
+     python_version = "3.12"
+     warn_return_any = true
+     warn_unused_configs = true
+     disallow_untyped_defs = false  # Gradually enable
+
+     [[tool.mypy.overrides]]
+     module = "bs4.*"
+     ignore_missing_imports = true
+     ```
+   - Document rationale for BeautifulSoup4 ignores
+
+5. **Update Type Hints in Handler Classes**:
+   - Ensure all concrete handler classes inherit correct return types
+   - Fix any inconsistent type hints in Stories 2.2 and 2.3 handlers
+   - Add type hints to internal helper methods where missing
+
+6. **Verify No New Warnings**:
+   - Run `uv run mypy src/server/services/confluence/` with strict mode
+   - Ensure zero new warnings introduced
+   - Document expected warnings (BeautifulSoup4 related) in comments
+
+**Integration Verification**:
+- IV1: MyPy strict mode runs without errors on confluence/ directory
+- IV2: NavigableString warnings suppressed with documented justification
+- IV3: Base class method signatures have complete type annotations
+- IV4: All concrete handlers inherit correct type signatures
+- IV5: mypy configuration properly excludes BeautifulSoup4 stub issues
+- IV6: All 179 tests continue to pass (no functional changes)
+- IV7: Documentation added for type ignore comments
+
+**Deliverable**: Updated base classes with complete type annotations + mypy configuration + zero new warnings
+
+**Estimated Effort**: 0.5 days (4 hours)
+
+**Dependencies**:
+- Should be completed AFTER Story 2.5 (all handlers implemented)
+- Non-blocking for subsequent epics (can be done in parallel with Epic 3)
+
+**Files Modified**:
+- `python/src/server/services/confluence/macro_handlers/base.py` - Add return types
+- `python/src/server/services/confluence/element_handlers/base.py` - Add return types
+- `python/pyproject.toml` - Add mypy configuration
+- All handler files (minor type hint updates as needed)
+
+**Technical Context** (from DoD Report):
+- Pre-existing from Story 2.2 (base classes)
+- Does NOT block functionality (179 tests passing)
+- Are NOT introduced by Story 2.3 (exist in Story 2.1/2.2 code)
+- Impact: Code quality and maintainability
+- No runtime impact (type checking only)
+
+**Success Criteria**:
+- ✅ Zero MyPy strict mode errors in `src/server/services/confluence/`
+- ✅ All type ignore comments have justification
+- ✅ Base class signatures complete
+- ✅ MyPy configuration documented
+- ✅ All tests pass unchanged
+
+---
+
 ## Success Metrics
 
 ### Code Quality
@@ -673,21 +761,25 @@ async def sync_space(self, source_id: str, space_key: str):
 | **2.3** | RAG-Critical Element Handlers | 1 day | **1.5 days** | **1 day** | **-0.5** | Multimodal LLM default (faster than local OCR) |
 | **2.4** | Table Processor & Metadata Extractor | 1 day | **1.5 days** | **1.5 days** | **+0.5 day** | Docling metadata extraction |
 | **2.5** | Utility Modules & Integration Testing | 1 day | 1 day | 1 day | - | No change (utilities) |
-| **TOTAL** | **Epic 2: HTML to Markdown Processing** | **5 days** | **8 days** | **7 days** | **+2 days** | **Hybrid approach optimization** |
+| **2.7** ⭐NEW | MyPy Type Annotation Warnings (Tech Debt) | - | - | **0.5 days** | **+0.5** | Address pre-existing type safety issues |
+| **TOTAL** | **Epic 2: HTML to Markdown Processing** | **5 days** | **8 days** | **7.5 days** | **+2.5 days** | **Hybrid approach + type safety** |
 
 ### Implementation Sequence (CRITICAL)
 
 **Story 2.6 must be completed BEFORE Story 2.2** (dependency)
 
-**Recommended Order** (7 days total):
+**Recommended Order** (7.5 days total):
 1. **Day 1**: Story 2.1 (Core Infrastructure) - 1 day
 2. **Days 1.5-2.25**: Story 2.6 (Docling Service) - 0.75 days ⭐ BLOCKING for 2.2
 3. **Days 2.25-4.25**: Story 2.2 (Macro Handlers with Docling) - 2 days
 4. **Days 4.25-5.25**: Story 2.3 (Element Handlers with multimodal LLM + automatic Docling OCR fallback) - 1 day
 5. **Days 5.25-6.75**: Story 2.4 (Table Processor & Metadata) - 1.5 days
 6. **Days 6.75-7.75**: Story 2.5 (Utilities & Integration Tests) - 1 day
+7. **Days 7.75-8.25**: Story 2.7 (MyPy Type Annotations - Tech Debt) - 0.5 days ⚙️ NON-BLOCKING
 
-**Total: 7 days** (rounded from 7.25 days)
+**Total: 8.25 days** (rounded to 8.5 days for planning)
+
+**Note**: Story 2.7 can be parallelized with Epic 3 if needed (non-blocking technical debt)
 
 ### Key Deliverables with Docling Integration
 

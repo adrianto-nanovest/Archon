@@ -45,12 +45,12 @@ class BaseMacroHandler(ABC):
         provides comprehensive error logging with page_id context when handlers fail.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the handler with a logger."""
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
-    async def process(self, macro_tag: Tag, page_id: str, space_id: str = None) -> None:
+    async def process(self, macro_tag: Tag, page_id: str, space_id: str | None = None) -> None:
         """
         Process a single Confluence macro tag.
 

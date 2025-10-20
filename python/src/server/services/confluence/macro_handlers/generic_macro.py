@@ -1,7 +1,11 @@
 """Generic Macro Handler for unknown Confluence macros."""
 
 import markdownify
-from bs4 import NavigableString
+
+# BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+# but it's available at runtime via bs4/__init__.py import from bs4.element.
+# See: https://github.com/python/typeshed/issues/4968
+from bs4 import NavigableString  # type: ignore[attr-defined]
 
 from .base import BaseMacroHandler
 
@@ -9,7 +13,7 @@ from .base import BaseMacroHandler
 class GenericMacroHandler(BaseMacroHandler):
     """Fallback handler for unknown macro types."""
 
-    async def process(self, macro_tag, page_id, space_id=None):
+    async def process(self, macro_tag, page_id: str, space_id: str | None = None) -> None:
         try:
             macro_name = macro_tag.get("ac:name", "unknown")
 

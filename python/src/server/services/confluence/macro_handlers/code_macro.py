@@ -5,7 +5,10 @@ Extracts language-tagged code blocks from Confluence code macros and converts th
 to Markdown fenced code blocks while preserving all whitespace and indentation.
 """
 
-from bs4 import NavigableString
+# BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+# but it's available at runtime via bs4/__init__.py import from bs4.element.
+# See: https://github.com/python/typeshed/issues/4968
+from bs4 import NavigableString  # type: ignore[attr-defined]
 
 from .base import BaseMacroHandler
 
@@ -37,7 +40,7 @@ class CodeMacroHandler(BaseMacroHandler):
         ```
     """
 
-    async def process(self, macro_tag, page_id, space_id=None):
+    async def process(self, macro_tag, page_id: str, space_id: str | None = None) -> None:
         """
         Process a Confluence code macro and convert to Markdown fenced code block.
 

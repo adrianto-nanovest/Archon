@@ -271,6 +271,184 @@ class ConfluenceClient:
 
         return await self._retry_with_backoff(_download)
 
+    async def find_pages_by_titles(
+        self, space_id: str, page_titles: list[str]
+    ) -> dict[str, dict[str, str | None]]:
+        """Find pages in a space by their titles (bulk API call).
+
+        This method performs a single CQL query to resolve multiple page titles at once,
+        avoiding the N+1 query anti-pattern. Used by LinkHandler for bulk page resolution.
+
+        Args:
+            space_id: Confluence space ID or space key
+            page_titles: List of page titles to resolve
+
+        Returns:
+            Dictionary mapping page title to page info:
+            {
+                "Page Title": {
+                    "page_id": "123456",
+                    "url": "https://company.atlassian.net/wiki/spaces/SPACE/pages/123456/Page+Title"
+                }
+            }
+            Missing pages will have page_id and url set to None.
+
+        Raises:
+            ConfluenceAuthError: If authentication fails (401)
+            ConfluenceRateLimitError: If rate limit exceeded after retries (429)
+
+        Example:
+            >>> mapping = await client.find_pages_by_titles(
+            ...     space_id="DEVDOCS",
+            ...     page_titles=["User Guide", "API Reference", "FAQ"]
+            ... )
+            >>> print(mapping["User Guide"]["page_id"])
+            "123456789"
+        """
+        logger.debug(
+            "Find pages by titles (bulk)",
+            extra={"space_id": space_id, "title_count": len(page_titles)},
+        )
+
+        async def _find_pages() -> dict[str, dict[str, str | None]]:
+            try:
+                # Build CQL query for bulk page search
+                # Use OR conditions to search for all titles in a single query
+                title_conditions = " OR ".join(
+                    [f'title = "{title}"' for title in page_titles]
+                )
+                cql = f"space = {space_id} AND ({title_conditions})"
+
+                # Execute CQL search
+                pages = await asyncio.to_thread(
+                    self._client.cql, cql=cql, expand="space", limit=len(page_titles)
+                )
+
+                # Build mapping: {title: {page_id, url}}
+                result: dict[str, dict[str, str | None]] = {}
+                for page in pages.get("results", []):
+                    title = page.get("content", {}).get("title")
+                    page_id = page.get("content", {}).get("id")
+                    # Build URL from base_url and page details
+                    space_key = page.get("content", {}).get("space", {}).get("key")
+                    url = None
+                    if page_id and space_key:
+                        url = f"{self.base_url}/spaces/{space_key}/pages/{page_id}"
+
+                    if title:
+                        result[title] = {"page_id": page_id, "url": url}
+
+                # Add missing titles with None values
+                for title in page_titles:
+                    if title not in result:
+                        result[title] = {"page_id": None, "url": None}
+
+                logger.debug(
+                    "Find pages by titles succeeded",
+                    extra={
+                        "space_id": space_id,
+                        "requested": len(page_titles),
+                        "found": sum(1 for v in result.values() if v["page_id"]),
+                    },
+                )
+                return result
+
+            except Exception as e:
+                self._handle_api_error(
+                    e,
+                    operation="find_pages_by_titles",
+                    context={"space_id": space_id, "title_count": len(page_titles)},
+                )
+                raise  # For type checker - _handle_api_error always raises
+
+        return await self._retry_with_backoff(_find_pages)
+
+    async def get_users_by_account_ids(
+        self, account_ids: list[str]
+    ) -> dict[str, dict[str, str | None]]:
+        """Get user information for multiple account IDs (bulk API call).
+
+        This method resolves multiple user account IDs in a single operation,
+        avoiding the N+1 query anti-pattern. Used by UserHandler for bulk user resolution.
+
+        Args:
+            account_ids: List of Atlassian account IDs (format: "557058:abc123...")
+
+        Returns:
+            Dictionary mapping account ID to user info:
+            {
+                "557058:abc123": {
+                    "display_name": "John Doe",
+                    "email": "john@company.com",
+                    "profile_url": "https://company.atlassian.net/people/557058:abc123"
+                }
+            }
+            Missing users will have all fields set to None.
+
+        Raises:
+            ConfluenceAuthError: If authentication fails (401)
+            ConfluenceRateLimitError: If rate limit exceeded after retries (429)
+
+        Example:
+            >>> mapping = await client.get_users_by_account_ids(
+            ...     account_ids=["557058:abc123", "557058:def456"]
+            ... )
+            >>> print(mapping["557058:abc123"]["display_name"])
+            "John Doe"
+        """
+        logger.debug(
+            "Get users by account IDs (bulk)", extra={"account_id_count": len(account_ids)}
+        )
+
+        async def _get_users() -> dict[str, dict[str, str | None]]:
+            try:
+                # Atlassian API requires individual user lookups, but we batch them
+                # using asyncio.gather for parallel execution
+                async def get_user(account_id: str) -> tuple[str, dict[str, str | None]]:
+                    try:
+                        user_data = await asyncio.to_thread(
+                            self._client.get_user_details_by_accountid, account_id=account_id
+                        )
+                        return (
+                            account_id,
+                            {
+                                "display_name": user_data.get("displayName"),
+                                "email": user_data.get("email"),
+                                "profile_url": user_data.get("profilePicture", {}).get("path"),
+                            },
+                        )
+                    except Exception:
+                        # User not found or error - return None values
+                        return (
+                            account_id,
+                            {"display_name": None, "email": None, "profile_url": None},
+                        )
+
+                # Execute all user lookups in parallel
+                results = await asyncio.gather(*[get_user(aid) for aid in account_ids])
+
+                # Build mapping
+                result = dict(results)
+
+                logger.debug(
+                    "Get users by account IDs succeeded",
+                    extra={
+                        "requested": len(account_ids),
+                        "found": sum(1 for v in result.values() if v["display_name"]),
+                    },
+                )
+                return result
+
+            except Exception as e:
+                self._handle_api_error(
+                    e,
+                    operation="get_users_by_account_ids",
+                    context={"account_id_count": len(account_ids)},
+                )
+                raise  # For type checker - _handle_api_error always raises
+
+        return await self._retry_with_backoff(_get_users)
+
     async def _retry_with_backoff(self, func: Callable[[], Awaitable[T]], max_retries: int = 3) -> T:
         """Retry a function with exponential backoff on rate limit errors.
 

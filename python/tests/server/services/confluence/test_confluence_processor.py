@@ -135,7 +135,7 @@ class TestConfluenceProcessorIntegration:
                 execution_order.append("element")
 
         processor.macro_handlers = {"test": OrderTrackingMacroHandler()}
-        processor.element_handlers = {"test": OrderTrackingElementHandler()}
+        processor.element_handlers = [OrderTrackingElementHandler()]
 
         html = '<ac:structured-macro ac:name="test"></ac:structured-macro>'
         await processor.html_to_markdown(html, "12345678")
@@ -150,19 +150,24 @@ class TestConfluenceProcessorIntegration:
         # Test with empty string
         markdown, metadata = await processor.html_to_markdown("", "12345678")
         assert markdown == "" or markdown.strip() == ""
-        assert metadata == {}
+        # Story 2.4: Now returns metadata structure with empty lists
+        assert isinstance(metadata, dict)
+        assert metadata["word_count"] == 0
+        assert metadata["content_length"] == 0
 
         # Test with minimal HTML
         markdown, metadata = await processor.html_to_markdown(
             "<html></html>", "12345678"
         )
         assert isinstance(markdown, str)
-        assert metadata == {}
+        # Story 2.4: Now returns metadata structure
+        assert isinstance(metadata, dict)
 
         # Test with whitespace only
         markdown, metadata = await processor.html_to_markdown("   \n\n  ", "12345678")
         assert isinstance(markdown, str)
-        assert metadata == {}
+        # Story 2.4: Now returns metadata structure
+        assert isinstance(metadata, dict)
 
     async def test_logging_captures_page_id_and_context(self, caplog):
         """Test that logging output captures page_id, macro name, and error context."""
@@ -211,7 +216,7 @@ class TestConfluenceProcessorIntegration:
         processor = ConfluenceProcessor(confluence_client=mock_client)
 
         mock_handler = MockElementHandler()
-        processor.element_handlers = {"test": mock_handler}
+        processor.element_handlers = [mock_handler]
 
         html = "<p>Test content</p>"
         await processor.html_to_markdown(html, "12345678")
@@ -238,7 +243,9 @@ class TestConfluenceProcessorIntegration:
         markdown, metadata = await processor.html_to_markdown(html, "12345678")
 
         assert isinstance(markdown, str)
-        assert metadata == {}
+        # Story 2.4: Now returns metadata structure
+        assert isinstance(metadata, dict)
+        assert "word_count" in metadata
         # Macros should still be in output (not processed)
         assert "ac:structured-macro" in markdown or len(markdown) > 0
 
@@ -275,7 +282,7 @@ class TestConfluenceProcessorIntegration:
     async def test_graceful_degradation_with_element_handler_failure(self):
         """Test that element handler failures don't crash conversion."""
         processor = ConfluenceProcessor()
-        processor.element_handlers = {"failing": FailingElementHandler()}
+        processor.element_handlers = ["failing"]  # This will cause an error
 
         html = "<p>Test content</p>"
 
@@ -283,7 +290,9 @@ class TestConfluenceProcessorIntegration:
         markdown, metadata = await processor.html_to_markdown(html, "12345678")
 
         assert isinstance(markdown, str)
-        assert metadata == {}
+        # Story 2.4: Now returns metadata structure
+        assert isinstance(metadata, dict)
+        assert "word_count" in metadata
 
     async def test_generic_macro_handler_fallback(self):
         """Test that generic handler is used for unknown macros."""

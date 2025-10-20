@@ -1,23 +1,22 @@
 """Embed Macro Handler for Confluence Storage Format."""
 
-from bs4 import NavigableString
+# BeautifulSoup4 doesn't explicitly export NavigableString in type stubs,
+# but it's available at runtime via bs4/__init__.py import from bs4.element.
+# See: https://github.com/python/typeshed/issues/4968
+from bs4 import NavigableString  # type: ignore[attr-defined]
 
+from ..utils.url_converter import convert_embed_url
 from .base import BaseMacroHandler
 
 
 class EmbedMacroHandler(BaseMacroHandler):
     """Handler for Confluence iframe/embed macros."""
 
-    def __init__(self, external_links_tracker=None):
+    def __init__(self, external_links_tracker: list | None = None) -> None:
         super().__init__()
         self.external_links_tracker = external_links_tracker if external_links_tracker is not None else []
 
-    def _convert_embed_url(self, embed_url: str) -> str:
-        """Convert embed URL to original URL."""
-        # Simplified conversion - full implementation in integration
-        return embed_url.replace("/embed/", "/watch?v=") if "youtube" in embed_url else embed_url
-
-    async def process(self, macro_tag, page_id, space_id=None):
+    async def process(self, macro_tag, page_id: str, space_id: str | None = None) -> None:
         try:
             url_tag = macro_tag.find("ri:url")
             embed_url = url_tag.get("ri:value") if url_tag else ""
@@ -25,7 +24,7 @@ class EmbedMacroHandler(BaseMacroHandler):
             title_param = macro_tag.find("ac:parameter", {"ac:name": "title"})
             title = title_param.get_text() if title_param else "Embedded Content"
 
-            converted_url = self._convert_embed_url(embed_url)
+            converted_url = convert_embed_url(embed_url)
 
             self.external_links_tracker.append({"title": title, "url": converted_url})
 

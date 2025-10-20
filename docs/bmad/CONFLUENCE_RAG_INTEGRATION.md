@@ -1312,7 +1312,7 @@ After comprehensive analysis of three database schema options, the **Hybrid appr
 2. `python/src/server/services/confluence/confluence_sync_service.py` - Sync orchestration
 3. `python/src/server/services/confluence/confluence_processor.py` - HTML→Markdown
 4. `python/src/server/api_routes/confluence_api.py` - API endpoints
-5. `migration/0.1.0/010_add_confluence_pages.sql` - Database migration
+5. `migration/0.1.0/901_add_confluence_pages.sql` - Database migration
 
 **Key Files to Modify**:
 - None! Existing search, storage, and embedding services work as-is

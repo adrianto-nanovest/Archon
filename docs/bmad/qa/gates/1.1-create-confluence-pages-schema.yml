@@ -42,11 +42,11 @@ recommendations:
   immediate: []  # No immediate actions required
   future:
     - action: 'Consider adding performance benchmarks for large-scale deployments (10K+ pages)'
-      refs: ['migration/0.1.0/010_add_confluence_pages.sql']
+      refs: ['migration/0.1.0/901_add_confluence_pages.sql']
       priority: low
       rationale: 'Current design supports 4000+ pages per requirements. Benchmarks would validate scaling to 10K+.'
     - action: 'Consider adding database migration rollback script for emergency use'
-      refs: ['migration/0.1.0/010_add_confluence_pages.sql']
+      refs: ['migration/0.1.0/901_add_confluence_pages.sql']
       priority: low
       rationale: 'While idempotent forward migration exists, explicit rollback would aid disaster recovery.'
 

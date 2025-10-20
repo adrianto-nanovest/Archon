@@ -43,7 +43,7 @@ def migration_file_path():
     # Get project root (parent of python/ directory)
     test_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(test_dir))))
-    return os.path.join(project_root, "migration", "0.1.0", "010_add_confluence_pages.sql")
+    return os.path.join(project_root, "migration", "0.1.0", "901_add_confluence_pages.sql")
 
 
 @pytest.fixture
@@ -190,7 +190,7 @@ def test_migration_drops_existing_policies_for_idempotency(read_migration_sql):
 def test_migration_self_records_in_archon_migrations(read_migration_sql):
     """Verify migration records itself in archon_migrations table."""
     assert "INSERT INTO archon_migrations (version, migration_name)" in read_migration_sql
-    assert "VALUES ('0.1.0', '010_add_confluence_pages')" in read_migration_sql
+    assert "VALUES ('0.1.0', '901_add_confluence_pages')" in read_migration_sql
     assert "ON CONFLICT (version, migration_name) DO NOTHING" in read_migration_sql
 
 
@@ -338,7 +338,7 @@ def test_migration_file_exists(migration_file_path):
 
 def test_migration_file_has_header(read_migration_sql):
     """Verify migration file has standard header with metadata."""
-    assert "-- Migration: 010_add_confluence_pages.sql" in read_migration_sql
+    assert "-- Migration: 901_add_confluence_pages.sql" in read_migration_sql
     assert "-- Description:" in read_migration_sql
     assert "-- Version: 0.1.0" in read_migration_sql
     assert "-- Author: Archon Team" in read_migration_sql

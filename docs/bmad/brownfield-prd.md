@@ -273,7 +273,7 @@ python/src/server/
     └── knowledge_item_service.py # MODIFY: add 'confluence' type
 
 migration/0.1.0/
-└── 010_add_confluence_pages.sql  # NEW migration
+└── 901_add_confluence_pages.sql  # NEW migration
 
 archon-ui-main/src/features/
 └── confluence/                   # NEW vertical slice
@@ -306,7 +306,7 @@ archon-ui-main/src/features/
 **Build Process Integration**:
 - Backend: Docker multi-stage build in `docker-compose.yml` (no changes needed)
 - Frontend: Vite build process unchanged, proxies to backend during dev
-- Migration: Run `010_add_confluence_pages.sql` before deploying new code
+- Migration: Run `901_add_confluence_pages.sql` before deploying new code
 - Dependencies: Add `atlassian-python-api` and `markdownify` to `pyproject.toml`
 
 **Deployment Strategy**:
@@ -437,7 +437,7 @@ I want **to create migration 010 with `confluence_pages` table and indexes**,
 so that **Confluence metadata can be stored separately from chunks with optimized query performance**.
 
 **Acceptance Criteria**:
-1. Migration file `010_add_confluence_pages.sql` created in `migration/0.1.0/` directory
+1. Migration file `901_add_confluence_pages.sql` created in `migration/0.1.0/` directory
 2. `confluence_pages` table includes: page_id (PK), source_id (FK), space_key, title, version, last_modified, is_deleted, path, metadata JSONB
 3. Foreign key constraint: `source_id REFERENCES archon_sources(source_id) ON DELETE CASCADE`
 4. Indexes created: source (partial with is_deleted=false), space, path (text_pattern_ops), JSONB (jira_issue_links, user_mentions)

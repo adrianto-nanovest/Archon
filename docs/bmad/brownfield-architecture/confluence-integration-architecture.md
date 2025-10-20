@@ -226,7 +226,7 @@ changed_pages = confluence_client.cql_search(cql, expand='body.storage,version,a
 - `python/src/server/api_routes/confluence_api.py` (~100 lines)
 
 ### 3. Database Migration
-- `migration/0.1.0/010_add_confluence_pages.sql` (schema + indexes)
+- `migration/0.1.0/901_add_confluence_pages.sql` (schema + indexes)
 
 ### 4. Frontend (future)
 - `archon-ui-main/src/features/confluence/` (vertical slice)

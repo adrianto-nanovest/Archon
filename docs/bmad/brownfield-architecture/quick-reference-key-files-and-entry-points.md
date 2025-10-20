@@ -43,7 +43,7 @@
 - `python/src/server/services/confluence/confluence_sync_service.py` - CQL-based sync logic
 - `python/src/server/services/confluence/confluence_processor.py` - HTML → Markdown conversion
 - `python/src/server/api_routes/confluence_api.py` - REST endpoints
-- `migration/0.1.0/010_add_confluence_pages.sql` - Database migration
+- `migration/0.1.0/901_add_confluence_pages.sql` - Database migration
 
 ### Files to MODIFY (Minimal Changes)
 - `python/src/server/services/knowledge/knowledge_item_service.py` - Add 'confluence' source type

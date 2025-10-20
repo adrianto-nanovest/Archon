@@ -78,7 +78,7 @@ archon/
 │       ├── 003-007_ollama_*.sql     # Ollama integration
 │       ├── 008_add_migration_tracking.sql    # Migration system
 │       ├── 009_add_provider_placeholders.sql # LLM providers
-│       └── 010_add_confluence_pages.sql      # **TO CREATE: Confluence tables**
+│       └── 901_add_confluence_pages.sql      # **TO CREATE: Confluence tables**
 │
 ├── .bmad-core/                      # BMad methodology (100+ files)
 │   ├── agents/                      # 10 agent roles

@@ -219,7 +219,7 @@
 
 ### Database Changes
 
-**Migration File:** `migration/0.1.0/010_add_confluence_pages.sql`
+**Migration File:** `migration/0.1.0/901_add_confluence_pages.sql`
 
 ```sql
 -- Create confluence_pages table (see Data Models section for full schema)

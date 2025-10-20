@@ -72,7 +72,7 @@ This document captures the **CURRENT STATE** of the Archon codebase as of Octobe
 - `python/src/server/services/confluence/confluence_sync_service.py` - CQL-based sync logic
 - `python/src/server/services/confluence/confluence_processor.py` - HTML → Markdown conversion
 - `python/src/server/api_routes/confluence_api.py` - REST endpoints
-- `migration/0.1.0/010_add_confluence_pages.sql` - Database migration
+- `migration/0.1.0/901_add_confluence_pages.sql` - Database migration
 
 #### Files to MODIFY (Minimal Changes)
 - `python/src/server/services/knowledge/knowledge_item_service.py` - Add 'confluence' source type
@@ -206,7 +206,7 @@ archon/
 │       ├── 003-007_ollama_*.sql     # Ollama integration
 │       ├── 008_add_migration_tracking.sql    # Migration system
 │       ├── 009_add_provider_placeholders.sql # LLM providers
-│       └── 010_add_confluence_pages.sql      # **TO CREATE: Confluence tables**
+│       └── 901_add_confluence_pages.sql      # **TO CREATE: Confluence tables**
 │
 ├── .bmad-core/                      # BMad methodology (100+ files)
 │   ├── agents/                      # 10 agent roles
@@ -674,7 +674,7 @@ changed_pages = confluence_client.cql_search(cql, expand='body.storage,version,a
    - `python/src/server/api_routes/confluence_api.py` (~100 lines)
 
 3. **Database Migration:**
-   - `migration/0.1.0/010_add_confluence_pages.sql` (schema + indexes)
+   - `migration/0.1.0/901_add_confluence_pages.sql` (schema + indexes)
 
 4. **Frontend (future):**
    - `archon-ui-main/src/features/confluence/` (vertical slice)
@@ -1070,7 +1070,7 @@ make lint-be       # Backend only (Ruff + MyPy)
 
 #### Database Changes
 
-**Migration File:** `migration/0.1.0/010_add_confluence_pages.sql`
+**Migration File:** `migration/0.1.0/901_add_confluence_pages.sql`
 
 ```sql
 -- Create confluence_pages table (see Data Models section for full schema)

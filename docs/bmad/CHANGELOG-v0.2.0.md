@@ -179,7 +179,7 @@ docker compose up -d --build
 **Manual upgrade:**
 1. Backup your database (recommended)
 2. Pull latest code: `git pull origin main`
-3. Run migration 010: `psql < migration/0.1.0/010_add_confluence_pages.sql`
+3. Run migration 010: `psql < migration/0.1.0/901_add_confluence_pages.sql`
 4. Restart services: `make dev` or `docker compose restart`
 
 **Post-upgrade:**

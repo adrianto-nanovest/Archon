@@ -1,4 +1,4 @@
--- Migration: 010_add_confluence_pages.sql
+-- Migration: 901_add_confluence_pages.sql
 -- Description: Create confluence_pages table with metadata storage and performance indexes for Confluence Cloud integration
 -- Version: 0.1.0
 -- Author: Archon Team
@@ -146,5 +146,5 @@ CREATE POLICY "Allow authenticated users to read confluence_pages" ON confluence
 -- ============================================================================
 
 INSERT INTO archon_migrations (version, migration_name)
-VALUES ('0.1.0', '010_add_confluence_pages')
+VALUES ('0.1.0', '901_add_confluence_pages')
 ON CONFLICT (version, migration_name) DO NOTHING;

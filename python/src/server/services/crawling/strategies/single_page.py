@@ -179,12 +179,24 @@ class SinglePageCrawlStrategy:
                 if 'getting-started' in url:
                     logger.info(f"Markdown sample for getting-started: {markdown_sample}")
 
+                # Extract title from HTML <title> tag
+                title = "Untitled"
+                if result.html:
+                    import re
+                    title_match = re.search(r'<title[^>]*>(.*?)</title>', result.html, re.IGNORECASE | re.DOTALL)
+                    if title_match:
+                        extracted_title = title_match.group(1).strip()
+                        # Clean up HTML entities
+                        extracted_title = extracted_title.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
+                        if extracted_title:
+                            title = extracted_title
+
                 return {
                     "success": True,
                     "url": original_url,  # Use original URL for tracking
                     "markdown": result.markdown,
                     "html": result.html,  # Use raw HTML instead of cleaned_html for code extraction
-                    "title": result.title or "Untitled",
+                    "title": title,
                     "links": result.links,
                     "content_length": len(result.markdown)
                 }
@@ -217,17 +229,43 @@ class SinglePageCrawlStrategy:
     ) -> list[dict[str, Any]]:
         """
         Crawl a .txt or markdown file with comprehensive error handling and progress reporting.
-        
+
         Args:
             url: URL of the text/markdown file
             transform_url_func: Function to transform URLs (e.g., GitHub URLs)
             progress_callback: Optional callback for progress updates
-            start_progress: Starting progress percentage
-            end_progress: Ending progress percentage
-            
+            start_progress: Starting progress percentage (must be 0-100)
+            end_progress: Ending progress percentage (must be 0-100 and > start_progress)
+
         Returns:
             List containing the crawled document
+
+        Raises:
+            ValueError: If start_progress or end_progress are invalid
         """
+        # Validate progress parameters before any async work or progress reporting
+        if not isinstance(start_progress, (int, float)) or not isinstance(end_progress, (int, float)):
+            raise ValueError(
+                f"start_progress and end_progress must be int or float, "
+                f"got start_progress={type(start_progress).__name__}, end_progress={type(end_progress).__name__}"
+            )
+
+        if not (0 <= start_progress <= 100):
+            raise ValueError(
+                f"start_progress must be in range [0, 100], got {start_progress}"
+            )
+
+        if not (0 <= end_progress <= 100):
+            raise ValueError(
+                f"end_progress must be in range [0, 100], got {end_progress}"
+            )
+
+        if start_progress >= end_progress:
+            raise ValueError(
+                f"start_progress must be less than end_progress, "
+                f"got start_progress={start_progress}, end_progress={end_progress}"
+            )
+
         try:
             # Transform GitHub URLs to raw content URLs if applicable
             original_url = url

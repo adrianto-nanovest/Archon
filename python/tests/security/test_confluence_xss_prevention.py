@@ -17,7 +17,6 @@ All malicious content should be stripped by markdownify, resulting in safe
 Markdown output with no executable code.
 """
 
-import pytest
 from markdownify import markdownify as md
 
 

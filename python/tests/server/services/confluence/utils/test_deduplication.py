@@ -4,7 +4,6 @@ Unit tests for deduplication utilities module.
 Story 2.5: Utility Modules & Integration Testing
 """
 
-import pytest
 
 from src.server.services.confluence.utils.deduplication import (
     deduplicate_asset_links,

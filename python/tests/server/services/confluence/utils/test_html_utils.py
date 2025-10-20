@@ -4,7 +4,6 @@ Unit tests for HTML utilities module.
 Story 2.5: Utility Modules & Integration Testing
 """
 
-import pytest
 from bs4 import BeautifulSoup
 
 from src.server.services.confluence.utils.html_utils import (

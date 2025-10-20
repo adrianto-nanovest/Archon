@@ -9,12 +9,14 @@ Tests verify the orchestrator's ability to:
 - Provide comprehensive logging with context
 """
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, call
 from bs4 import BeautifulSoup, Tag
+
 from src.server.services.confluence.confluence_processor import ConfluenceProcessor
-from src.server.services.confluence.macro_handlers.base import BaseMacroHandler
 from src.server.services.confluence.element_handlers.base import BaseElementHandler
+from src.server.services.confluence.macro_handlers.base import BaseMacroHandler
 
 
 class MockMacroHandler(BaseMacroHandler):

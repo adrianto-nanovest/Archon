@@ -150,8 +150,8 @@ class ConfluenceProcessor:
         ]
 
         # Import table processor and metadata extractor (Story 2.4)
-        from .table_processor import TableProcessor
         from .metadata_extractor import MetadataExtractor
+        from .table_processor import TableProcessor
 
         # Instantiate table processor and metadata extractor (Story 2.4)
         self.table_processor = TableProcessor()

@@ -7,8 +7,9 @@ This addresses QA gate SEC-001: Ensuring validation is integrated into
 production code paths, not just tested in isolation.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.server.services.confluence.confluence_client import ConfluenceClient
 

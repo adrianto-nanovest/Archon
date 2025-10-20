@@ -1,8 +1,9 @@
 """Unit tests for User Handler."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from bs4 import BeautifulSoup
-from unittest.mock import AsyncMock, MagicMock
 
 from src.server.services.confluence.element_handlers.user_handler import UserHandler
 

@@ -19,7 +19,6 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 # Basic validation - simplified inline version
-
 # Import unified logging
 from ..config.logfire_config import get_logger, safe_logfire_error, safe_logfire_info
 from ..services.crawler_manager import get_crawler
@@ -62,7 +61,7 @@ active_crawl_tasks: dict[str, asyncio.Task] = {}
 async def _validate_provider_api_key(provider: str = None) -> None:
     """Validate LLM provider API key before starting operations."""
     logger.info("🔑 Starting API key validation...")
-    
+
     try:
         # Basic provider validation
         if not provider:
@@ -117,7 +116,7 @@ async def _validate_provider_api_key(provider: str = None) -> None:
                     "provider": provider,
                 },
             )
-            
+
         logger.info(f"✅ {provider.title()} API key validation successful")
 
     except HTTPException:
@@ -129,7 +128,7 @@ async def _validate_provider_api_key(provider: str = None) -> None:
         error_str = str(e)
         sanitized_error = ProviderErrorFactory.sanitize_provider_error(error_str, provider or "openai")
         logger.error(f"❌ Caught exception during API key validation: {sanitized_error}")
-        
+
         # Always fail for any exception during validation - better safe than sorry
         logger.error("🚨 API key validation failed - blocking crawl operation")
         raise HTTPException(
@@ -177,6 +176,7 @@ class RagQueryRequest(BaseModel):
     query: str
     source: str | None = None
     match_count: int = 5
+    return_mode: str = "chunks"  # "chunks" or "pages"
 
 
 @router.get("/crawl-progress/{progress_id}")
@@ -611,14 +611,14 @@ async def get_knowledge_item_code_examples(
 @router.post("/knowledge-items/{source_id}/refresh")
 async def refresh_knowledge_item(source_id: str):
     """Refresh a knowledge item by re-crawling its URL with the same metadata."""
-    
+
     # Validate API key before starting expensive refresh operation
     logger.info("🔍 About to validate API key for refresh...")
     provider_config = await credential_service.get_active_provider("embedding")
     provider = provider_config.get("provider", "openai")
     await _validate_provider_api_key(provider)
     logger.info("✅ API key validation completed successfully for refresh")
-    
+
     try:
         safe_logfire_info(f"Starting knowledge item refresh | source_id={source_id}")
 
@@ -898,14 +898,14 @@ async def upload_document(
     extract_code_examples: bool = Form(True),
 ):
     """Upload and process a document with progress tracking."""
-    
-    # Validate API key before starting expensive upload operation  
+
+    # Validate API key before starting expensive upload operation
     logger.info("🔍 About to validate API key for upload...")
     provider_config = await credential_service.get_active_provider("embedding")
     provider = provider_config.get("provider", "openai")
     await _validate_provider_api_key(provider)
     logger.info("✅ API key validation completed successfully for upload")
-    
+
     try:
         # DETAILED LOGGING: Track knowledge_type parameter flow
         safe_logfire_info(
@@ -1116,10 +1116,13 @@ async def perform_rag_query(request: RagQueryRequest):
         raise HTTPException(status_code=422, detail="Query cannot be empty")
 
     try:
-        # Use RAGService for RAG query
+        # Use RAGService for unified RAG query with return_mode support
         search_service = RAGService(get_supabase_client())
         success, result = await search_service.perform_rag_query(
-            query=request.query, source=request.source, match_count=request.match_count
+            query=request.query,
+            source=request.source,
+            match_count=request.match_count,
+            return_mode=request.return_mode
         )
 
         if success:

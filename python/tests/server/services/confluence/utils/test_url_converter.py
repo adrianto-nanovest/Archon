@@ -4,7 +4,6 @@ Unit tests for URL converter module.
 Story 2.5: Utility Modules & Integration Testing
 """
 
-import pytest
 
 from src.server.services.confluence.utils.url_converter import (
     _convert_airtable_embed,

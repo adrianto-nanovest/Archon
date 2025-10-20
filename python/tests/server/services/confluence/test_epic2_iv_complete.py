@@ -6,8 +6,9 @@ Comprehensive validation of all Epic 2 IV requirements (IV1-IV9).
 Story 2.5: Utility Modules & Integration Testing
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.server.services.confluence.confluence_processor import ConfluenceProcessor
 

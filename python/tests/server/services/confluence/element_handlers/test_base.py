@@ -7,6 +7,7 @@ and provides proper initialization with logging support for graceful degradation
 
 import pytest
 from bs4 import BeautifulSoup
+
 from src.server.services.confluence.element_handlers.base import BaseElementHandler
 
 

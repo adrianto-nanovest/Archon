@@ -12,10 +12,8 @@ Tests verify:
 8. Existing functionality preservation (web crawl, document upload)
 """
 
-import asyncio
 import os
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -49,7 +47,7 @@ def migration_file_path():
 @pytest.fixture
 def read_migration_sql(migration_file_path):
     """Read migration SQL file content."""
-    with open(migration_file_path, "r") as f:
+    with open(migration_file_path) as f:
         return f.read()
 
 

@@ -1,8 +1,8 @@
 """Integration tests for element handlers (Story 2.3)."""
 
-import pytest
-from bs4 import BeautifulSoup
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.server.services.confluence.confluence_processor import ConfluenceProcessor
 

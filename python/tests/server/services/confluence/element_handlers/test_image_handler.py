@@ -1,8 +1,9 @@
 """Unit tests for Image Handler."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from bs4 import BeautifulSoup
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.server.services.confluence.element_handlers.image_handler import ImageHandler
 

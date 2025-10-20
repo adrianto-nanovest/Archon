@@ -5,9 +5,7 @@ and other existing infrastructure components to ensure they can handle Confluenc
 content without modifications.
 """
 
-import json
 import uuid
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

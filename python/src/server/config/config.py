@@ -45,6 +45,27 @@ class RAGStrategyConfig:
     use_reranking: bool = True
 
 
+@dataclass
+class ConfluenceSettings:
+    """Configuration for Confluence content processing with Docling.
+
+    These settings control how Confluence attachments and images are processed
+    for RAG ingestion. Settings are optimized for memory management and processing
+    performance while maintaining quality.
+    """
+
+    # Docling document processing
+    docling_enabled: bool = True  # Master toggle for PDF/Office processing
+    docling_max_file_size_mb: int = 50  # Skip large files (memory protection)
+    docling_timeout_seconds: int = 60  # Per-file timeout (prevent infinite processing)
+    docling_max_concurrent: int = 2  # Memory management (max parallel processes)
+
+    # Image processing mode
+    # Options: "multimodal" (use MODEL_CHOICE LLM), "docling_ocr" (force OCR), "none" (skip)
+    # Note: MODEL_CHOICE from RAG Settings determines LLM for multimodal processing
+    image_processing_mode: str = "multimodal"
+
+
 def validate_openai_api_key(api_key: str) -> bool:
     """Validate OpenAI API key format."""
     if not api_key:
@@ -297,4 +318,38 @@ def get_rag_strategy_config() -> RAGStrategyConfig:
         use_hybrid_search=str_to_bool(os.getenv("USE_HYBRID_SEARCH")),
         use_agentic_rag=str_to_bool(os.getenv("USE_AGENTIC_RAG")),
         use_reranking=str_to_bool(os.getenv("USE_RERANKING")),
+    )
+
+
+def get_confluence_settings() -> ConfluenceSettings:
+    """Load Confluence processing settings from environment variables.
+
+    These settings control Docling document processing behavior for
+    Confluence attachments and images.
+
+    Returns:
+        ConfluenceSettings with values from environment or defaults
+    """
+
+    def str_to_bool(value: str | None, default: bool = True) -> bool:
+        """Convert string environment variable to boolean."""
+        if value is None:
+            return default
+        return value.lower() in ("true", "1", "yes", "on")
+
+    def str_to_int(value: str | None, default: int) -> int:
+        """Convert string environment variable to integer."""
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except ValueError:
+            return default
+
+    return ConfluenceSettings(
+        docling_enabled=str_to_bool(os.getenv("DOCLING_ENABLED"), default=True),
+        docling_max_file_size_mb=str_to_int(os.getenv("DOCLING_MAX_FILE_SIZE_MB"), default=50),
+        docling_timeout_seconds=str_to_int(os.getenv("DOCLING_TIMEOUT_SECONDS"), default=60),
+        docling_max_concurrent=str_to_int(os.getenv("DOCLING_MAX_CONCURRENT"), default=2),
+        image_processing_mode=os.getenv("IMAGE_PROCESSING_MODE", "multimodal"),
     )

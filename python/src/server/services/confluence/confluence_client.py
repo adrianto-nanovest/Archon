@@ -213,6 +213,64 @@ class ConfluenceClient:
 
         return await self._retry_with_backoff(_get_page_ids)
 
+    async def download_attachment(self, page_id: str, filename: str, output_path: str) -> None:
+        """Download a specific attachment from a Confluence page.
+
+        Downloads attachment by filename and writes to the specified path.
+        This method handles retries with exponential backoff for rate limits.
+
+        Args:
+            page_id: Confluence page ID containing the attachment
+            filename: Name of the attachment file to download
+            output_path: Local file path where attachment should be saved
+
+        Raises:
+            ConfluenceAuthError: If authentication fails (401)
+            ConfluenceRateLimitError: If rate limit exceeded after retries (429)
+            ConfluenceNotFoundError: If page or attachment not found (404)
+            ValueError: If attachment filename not found on page
+
+        Example:
+            >>> await client.download_attachment(
+            ...     page_id='123456789',
+            ...     filename='document.pdf',
+            ...     output_path='/tmp/document.pdf'
+            ... )
+        """
+        logger.debug("Download attachment", extra={"page_id": page_id, "filename": filename})
+
+        async def _download() -> None:
+            try:
+                # Download attachments (returns dict with filename as key)
+                attachments = await asyncio.to_thread(
+                    self._client.download_attachments_from_page, page_id=page_id, path=None, start=0, limit=500
+                )
+
+                # Find the specific attachment by filename
+                if filename not in attachments:
+                    available = list(attachments.keys())
+                    error_msg = f"Attachment '{filename}' not found on page {page_id}. Available: {available}"
+                    logger.error(error_msg, extra={"page_id": page_id, "filename": filename, "available": available})
+                    raise ValueError(error_msg)
+
+                # Write attachment content to output path
+                attachment_data = attachments[filename]
+                with open(output_path, "wb") as f:
+                    f.write(attachment_data)
+
+                logger.debug(
+                    "Download attachment succeeded", extra={"page_id": page_id, "filename": filename, "size_bytes": len(attachment_data)}
+                )
+
+            except ValueError:
+                # Re-raise ValueError (attachment not found)
+                raise
+            except Exception as e:
+                self._handle_api_error(e, operation="download_attachment", context={"page_id": page_id, "filename": filename})
+                raise  # For type checker - _handle_api_error always raises
+
+        return await self._retry_with_backoff(_download)
+
     async def _retry_with_backoff(self, func: Callable[[], Awaitable[T]], max_retries: int = 3) -> T:
         """Retry a function with exponential backoff on rate limit errors.
 

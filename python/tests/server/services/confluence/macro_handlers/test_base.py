@@ -7,6 +7,7 @@ and provides proper initialization with logging support.
 
 import pytest
 from bs4 import BeautifulSoup, Tag
+
 from src.server.services.confluence.macro_handlers.base import BaseMacroHandler
 
 

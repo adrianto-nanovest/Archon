@@ -49,6 +49,7 @@ server = [
     # AI/ML libraries
     "openai==1.71.0",
     # Document processing
+    "docling>=2.18.0",
     "pypdf2>=3.0.1",
     "pdfplumber>=0.11.6",
     "python-docx>=1.1.2",
@@ -75,6 +76,11 @@ server-reranking = [
     "sentence-transformers>=4.1.0",
     "torch>=2.0.0",
     "transformers>=4.30.0",
+]
+
+# Optional Docling OCR dependencies for server
+server-docling = [
+    "docling[easyocr]>=2.18.0",
 ]
 
 # MCP container dependencies
@@ -113,6 +119,7 @@ all = [
     "atlassian-python-api==4.0.7",
     "markdownify==1.2.0",
     "openai==1.71.0",
+    "docling>=2.18.0",
     "pypdf2>=3.0.1",
     "pdfplumber>=0.11.6",
     "python-docx>=1.1.2",

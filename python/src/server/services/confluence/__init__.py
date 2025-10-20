@@ -13,7 +13,13 @@ This module provides the complete Confluence integration stack:
    - Two-pass pipeline: macro expansion → element conversion
    - Error isolation with graceful degradation
 
-3. **Handler Base Classes**:
+3. **Docling Processor** (`DoclingProcessor`):
+   - Processes PDF/Office documents (DOCX, PPTX, XLSX) using Docling library
+   - Image OCR fallback for when multimodal LLM unavailable
+   - Extracts markdown, plain text, and metadata for RAG ingestion
+   - Concurrency limiting and timeout protection
+
+4. **Handler Base Classes**:
    - `BaseMacroHandler`: Extend to create custom macro handlers
    - `BaseElementHandler`: Extend to create custom element handlers
 
@@ -22,12 +28,14 @@ Example usage:
     from server.services.confluence import (
         ConfluenceClient,
         ConfluenceProcessor,
+        DoclingProcessor,
         BaseMacroHandler,
     )
 
-    # Initialize client and processor
+    # Initialize client and processors
     client = ConfluenceClient(base_url, email, token)
     processor = ConfluenceProcessor(confluence_client=client)
+    docling = DoclingProcessor(docling_enabled=True)
 
     # Fetch and convert page content
     html = client.get_page_content(page_id="12345678")
@@ -36,6 +44,11 @@ Example usage:
         page_id="12345678",
         space_id="DEVDOCS"
     )
+
+    # Process PDF attachment
+    result = await docling.process_attachment(file_path, page_id="12345678")
+    if result["success"]:
+        pdf_markdown = result["markdown"]
 
     # Create custom macro handler (Story 2.2+)
     class CustomMacroHandler(BaseMacroHandler):
@@ -52,6 +65,7 @@ from .confluence_client import (
     ConfluenceRateLimitError,
 )
 from .confluence_processor import ConfluenceProcessor
+from .docling_processor import DoclingProcessor
 from .element_handlers.base import BaseElementHandler
 from .macro_handlers.base import BaseMacroHandler
 
@@ -63,6 +77,8 @@ __all__ = [
     "ConfluenceNotFoundError",
     # HTML Processor
     "ConfluenceProcessor",
+    # Docling Processor
+    "DoclingProcessor",
     # Handler Base Classes
     "BaseMacroHandler",
     "BaseElementHandler",

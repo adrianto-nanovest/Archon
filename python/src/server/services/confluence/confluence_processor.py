@@ -46,30 +46,79 @@ class ConfluenceProcessor:
     """
 
     def __init__(
-        self, confluence_client: object | None = None, jira_client: object | None = None
+        self,
+        confluence_client: object | None = None,
+        jira_client: object | None = None,
+        docling_processor: object | None = None,
+        settings: object | None = None,
     ):
         """
         Initialize processor with optional Confluence/JIRA clients.
 
         Args:
             confluence_client: Used for bulk API calls (user/page resolution)
-                             Story 2.3 will use this for element handlers
             jira_client: Optional, used for JQL query execution in JIRA macros
-                        Story 2.2 will use this for JIRA macro handler
+            docling_processor: Optional, used for PDF/Office attachment processing
+            settings: Optional, configuration settings for feature flags
         """
         self.confluence_client = confluence_client
         self.jira_client = jira_client
+        self.docling_processor = docling_processor
+        self.settings = settings
         self.logger = logging.getLogger("ConfluenceProcessor")
 
-        # Handler registries (will be populated by future stories)
-        # Story 2.2 will register macro handlers here
-        self.macro_handlers: dict[str, object] = {}
+        # Initialize shared metadata trackers for deduplication
+        self.jira_links_tracker = []
+        self.asset_links_tracker = []
+        self.external_links_tracker = []
+
+        # Import macro handlers
+        from .macro_handlers.attachment_macro import AttachmentMacroHandler
+        from .macro_handlers.code_macro import CodeMacroHandler
+        from .macro_handlers.embed_macro import EmbedMacroHandler
+        from .macro_handlers.generic_macro import GenericMacroHandler
+        from .macro_handlers.jira_macro import JiraMacroHandler
+        from .macro_handlers.panel_macro import PanelMacroHandler
+
+        # Instantiate handlers with dependency injection
+        code_handler = CodeMacroHandler()
+        panel_handler = PanelMacroHandler()
+        jira_handler = JiraMacroHandler(
+            jira_client=self.jira_client, jira_links_tracker=self.jira_links_tracker
+        )
+        attachment_handler = AttachmentMacroHandler(
+            confluence_client=self.confluence_client,
+            docling_processor=self.docling_processor,
+            asset_links_tracker=self.asset_links_tracker,
+            settings=self.settings,
+        )
+        embed_handler = EmbedMacroHandler(
+            external_links_tracker=self.external_links_tracker
+        )
+        generic_handler = GenericMacroHandler()
+
+        # Register handlers in macro_handlers dictionary
+        self.macro_handlers: dict[str, object] = {
+            "code": code_handler,
+            "panel": panel_handler,
+            "info": panel_handler,  # Same handler for all panel types
+            "note": panel_handler,
+            "warning": panel_handler,
+            "tip": panel_handler,
+            "jira": jira_handler,
+            "view-file": attachment_handler,
+            "iframe": embed_handler,
+        }
+
+        # Set generic fallback handler for unknown macros
+        self.generic_macro_handler = generic_handler
+
         # Story 2.3 will register element handlers here
         self.element_handlers: dict[str, object] = {}
-        # Story 2.2 will set this for unknown macros
-        self.generic_macro_handler: object | None = None
 
-        self.logger.info("ConfluenceProcessor initialized")
+        self.logger.info(
+            f"ConfluenceProcessor initialized with {len(self.macro_handlers)} macro handlers"
+        )
 
     async def html_to_markdown(
         self, html: str, page_id: str, space_id: str | None = None

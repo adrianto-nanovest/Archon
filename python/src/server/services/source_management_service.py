@@ -169,7 +169,7 @@ Requirements:
 - Use proper capitalization
 
 Examples:
-- "Anthropic Documentation" 
+- "Anthropic Documentation"
 - "OpenAI API Reference"
 - "Mem0 llms.txt"
 - "Supabase Docs"

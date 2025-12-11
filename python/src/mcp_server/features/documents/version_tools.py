@@ -46,17 +46,17 @@ def register_version_tools(mcp: FastMCP):
     ) -> str:
         """
         Find version history (consolidated: list + get).
-        
+
         Args:
             project_id: Project UUID (required)
             field_name: Filter by field (docs/features/data/prd)
             version_number: Get specific version (requires field_name)
             page: Page number for pagination
             per_page: Items per page (default: 10)
-        
+
         Returns:
             JSON array of versions or single version
-        
+
         Examples:
             find_versions(project_id="p-1")  # All versions
             find_versions(project_id="p-1", field_name="docs")  # Doc versions
@@ -141,7 +141,7 @@ def register_version_tools(mcp: FastMCP):
     ) -> str:
         """
         Manage versions (consolidated: create/restore).
-        
+
         Args:
             action: "create" | "restore"
             project_id: Project UUID (required)
@@ -151,13 +151,13 @@ def register_version_tools(mcp: FastMCP):
             change_summary: What changed (for create)
             document_id: Specific doc ID (optional)
             created_by: Who created version
-        
+
         Examples:
-            manage_version("create", project_id="p-1", field_name="docs", 
+            manage_version("create", project_id="p-1", field_name="docs",
                           content=[...], change_summary="Updated API")
-            manage_version("restore", project_id="p-1", field_name="docs", 
+            manage_version("restore", project_id="p-1", field_name="docs",
                           version_number=3)
-        
+
         Returns: {success: bool, version?: object, message: string}
         """
         try:

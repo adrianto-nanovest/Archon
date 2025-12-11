@@ -89,7 +89,7 @@ async def discover_models_endpoint(
 ) -> ModelDiscoveryResponse:
     """
     Discover models from multiple Ollama instances with capability detection.
-    
+
     This endpoint provides comprehensive model discovery across distributed Ollama
     deployments with automatic capability classification and health monitoring.
     """
@@ -146,7 +146,7 @@ async def health_check_endpoint(
 ) -> dict[str, Any]:
     """
     Check health status of multiple Ollama instances.
-    
+
     Provides real-time health monitoring with response times, model availability,
     and error diagnostics for distributed Ollama deployments.
     """
@@ -208,7 +208,7 @@ async def health_check_endpoint(
 async def validate_instance_endpoint(request: InstanceValidationRequest) -> InstanceValidationResponse:
     """
     Validate an Ollama instance with comprehensive capability testing.
-    
+
     Performs deep validation including connectivity, model availability,
     capability detection, and performance assessment.
     """
@@ -231,8 +231,8 @@ async def validate_instance_endpoint(request: InstanceValidationRequest) -> Inst
                     "total_models": len(models),
                     "chat_models": [m.name for m in models if "chat" in m.capabilities],
                     "embedding_models": [m.name for m in models if "embedding" in m.capabilities],
-                    "supported_dimensions": list(set(m.embedding_dimensions for m in models
-                                                   if m.embedding_dimensions))
+                    "supported_dimensions": list({m.embedding_dimensions for m in models
+                                                   if m.embedding_dimensions})
                 }
 
             except Exception as e:
@@ -258,7 +258,7 @@ async def validate_instance_endpoint(request: InstanceValidationRequest) -> Inst
 async def analyze_embedding_route_endpoint(request: EmbeddingRouteRequest) -> EmbeddingRouteResponse:
     """
     Analyze optimal routing for embedding operations.
-    
+
     Determines the best database column, dimension handling, and performance
     characteristics for a specific model and instance combination.
     """
@@ -298,7 +298,7 @@ async def get_available_embedding_routes_endpoint(
 ) -> dict[str, Any]:
     """
     Get all available embedding routes across multiple instances.
-    
+
     Provides a comprehensive view of embedding capabilities with performance
     rankings and routing recommendations for optimal throughput.
     """
@@ -351,7 +351,7 @@ async def get_available_embedding_routes_endpoint(
 async def clear_ollama_cache_endpoint() -> dict[str, str]:
     """
     Clear all Ollama-related caches for fresh data retrieval.
-    
+
     Useful for forcing refresh of model lists, capabilities, and health status
     after making changes to Ollama instances or models.
     """
@@ -412,7 +412,7 @@ class ModelListResponse(BaseModel):
 async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequest) -> ModelListResponse:
     """
     Discover models from Ollama instances, assess Archon compatibility, and store in database.
-    
+
     This endpoint fetches detailed model information from configured Ollama instances,
     evaluates their compatibility with Archon features, and stores the results for
     use in the model selection modal.
@@ -473,7 +473,7 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
         }
 
         # Upsert into archon_settings table
-        result = supabase.table("archon_settings").upsert({
+        supabase.table("archon_settings").upsert({
             "key": "ollama_discovered_models",
             "value": json.dumps(models_data),
             "category": "ollama",
@@ -500,7 +500,7 @@ async def discover_and_store_models_endpoint(request: ModelDiscoveryAndStoreRequ
 async def get_stored_models_endpoint() -> ModelListResponse:
     """
     Retrieve stored Ollama models from database.
-    
+
     Returns previously discovered and stored model information for use
     in the model selection modal.
     """
@@ -601,7 +601,7 @@ async def _warm_model_cache(instance_urls: list[str]) -> None:
 # Helper functions for model assessment and analysis
 async def _assess_archon_compatibility_with_testing(model, instance_url: str) -> dict[str, Any]:
     """Assess Archon compatibility for a given model using actual capability testing."""
-    model_name = model.name.lower()
+    model.name.lower()
     capabilities = getattr(model, 'capabilities', [])
 
     # Test actual model capabilities
@@ -842,11 +842,11 @@ def _generate_model_description(model) -> str | None:
 async def _test_function_calling_capability(model_name: str, instance_url: str) -> bool:
     """
     Test if a model supports function/tool calling by making an actual API call.
-    
+
     Args:
         model_name: Name of the model to test
         instance_url: Ollama instance URL
-        
+
     Returns:
         True if function calling is supported, False otherwise
     """
@@ -901,11 +901,11 @@ async def _test_function_calling_capability(model_name: str, instance_url: str) 
 async def _test_structured_output_capability(model_name: str, instance_url: str) -> bool:
     """
     Test if a model supports structured output by requesting JSON format.
-    
+
     Args:
         model_name: Name of the model to test
         instance_url: Ollama instance URL
-        
+
     Returns:
         True if structured output is supported, False otherwise
     """
@@ -1117,7 +1117,7 @@ async def discover_models_with_real_details(request: ModelDiscoveryAndStoreReque
         logger.info(f"Storing {len(embedding_models_with_dims)} embedding models with dimensions: {[(m['name'], m.get('embedding_dimensions')) for m in embedding_models_with_dims]}")
 
         # Update the stored models
-        result = supabase.table("archon_settings").update({
+        supabase.table("archon_settings").update({
             "value": json.dumps(models_data),
             "description": "Real Ollama model data from API endpoints",
             "updated_at": datetime.now().isoformat()
@@ -1232,7 +1232,7 @@ class ModelCapabilityTestResponse(BaseModel):
 async def test_model_capabilities_endpoint(request: ModelCapabilityTestRequest) -> ModelCapabilityTestResponse:
     """
     Test real-time capabilities of a specific model to provide accurate compatibility assessment.
-    
+
     This endpoint performs actual API calls to test function calling, structured output, and other
     advanced capabilities, providing definitive compatibility ratings instead of name-based assumptions.
     """

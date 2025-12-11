@@ -974,7 +974,7 @@ class CodeExtractionService:
         """
         Extract code blocks from PDF-extracted text that lacks markdown formatting.
         PDFs lose markdown delimiters, so we need to detect code patterns in plain text.
-        
+
         This uses a much simpler approach - look for distinct code segments separated by prose.
         """
         import re

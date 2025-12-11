@@ -63,16 +63,16 @@ def register_project_tools(mcp: FastMCP):
     ) -> str:
         """
         List and search projects (consolidated: list + search + get).
-        
+
         Args:
             project_id: Get specific project by ID (returns full details)
             query: Keyword search in title/description
-            page: Page number for pagination  
+            page: Page number for pagination
             per_page: Items per page (default: 10)
-        
+
         Returns:
             JSON array of projects or single project (optimized payloads for lists)
-        
+
         Examples:
             list_projects()  # All projects
             list_projects(query="auth")  # Search projects
@@ -155,19 +155,19 @@ def register_project_tools(mcp: FastMCP):
     ) -> str:
         """
         Manage projects (consolidated: create/update/delete).
-        
+
         Args:
             action: "create" | "update" | "delete"
             project_id: Project UUID for update/delete
             title: Project title (required for create)
             description: Project goals and scope
             github_repo: GitHub URL (e.g. "https://github.com/org/repo")
-        
+
         Examples:
             manage_project("create", title="Auth System")
             manage_project("update", project_id="p-1", description="Updated")
             manage_project("delete", project_id="p-1")
-        
+
         Returns: {success: bool, project?: object, message: string}
         """
         try:

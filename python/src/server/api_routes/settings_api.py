@@ -346,7 +346,7 @@ async def settings_health():
 @router.post("/credentials/status-check")
 async def check_credential_status(request: dict[str, list[str]]):
     """Check status of API credentials by actually decrypting and validating them.
-    
+
     This endpoint is specifically for frontend status indicators and returns
     decrypted credential values for connectivity testing.
     """

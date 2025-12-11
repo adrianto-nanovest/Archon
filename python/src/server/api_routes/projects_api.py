@@ -83,7 +83,7 @@ async def list_projects(
 ):
     """
     List all projects.
-    
+
     Args:
         include_content: If True (default), returns full project content.
                         If False, returns lightweight metadata with statistics.
@@ -282,7 +282,7 @@ async def get_all_task_counts(
     """
     Get task counts for all projects in a single batch query.
     Optimized endpoint to avoid N+1 query problem.
-    
+
     Returns counts grouped by project_id with todo, doing, and done counts.
     Review status is included in doing count to match frontend logic.
     """
@@ -957,7 +957,7 @@ async def mcp_update_task_status(task_id: str, status: str):
 async def list_project_documents(project_id: str, include_content: bool = False):
     """
     List all documents for a specific project.
-    
+
     Args:
         project_id: Project UUID
         include_content: If True, includes full document content.

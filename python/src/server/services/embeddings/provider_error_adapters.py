@@ -111,6 +111,34 @@ class AnthropicErrorAdapter(ProviderErrorAdapter):
         return sanitized
 
 
+class OpenRouterErrorAdapter(ProviderErrorAdapter):
+    def get_provider_name(self) -> str:
+        return "openrouter"
+
+    def sanitize_error_message(self, message: str) -> str:
+        if not isinstance(message, str) or not message.strip() or len(message) > 2000:
+            return "OpenRouter API encountered an error. Please verify your API key and quota."
+
+        sanitized = message
+
+        # Comprehensive OpenRouter patterns
+        patterns = [
+            (r'sk-or-v1-[a-zA-Z0-9_-]{10,}', '[REDACTED_KEY]'),              # OpenRouter API keys
+            (r'https?://[^\s]*openrouter\.ai[^\s]*', '[REDACTED_URL]'),       # OpenRouter URLs
+            (r'Bearer\s+[a-zA-Z0-9._-]+', 'Bearer [REDACTED_TOKEN]'),        # Bearer tokens
+        ]
+
+        for pattern, replacement in patterns:
+            sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+        # Check for sensitive words
+        sensitive_words = ['internal', 'server', 'endpoint']
+        if any(word in sanitized.lower() for word in sensitive_words):
+            return "OpenRouter API encountered an error. Please verify your API key and quota."
+
+        return sanitized
+
+
 class ProviderErrorFactory:
     """Factory for provider-agnostic error handling."""
 
@@ -118,6 +146,7 @@ class ProviderErrorFactory:
         "openai": OpenAIErrorAdapter(),
         "google": GoogleAIErrorAdapter(),
         "anthropic": AnthropicErrorAdapter(),
+        "openrouter": OpenRouterErrorAdapter(),
     }
 
     @classmethod
@@ -138,18 +167,27 @@ class ProviderErrorFactory:
         error_lower = error_str.lower()
 
         # Case-insensitive provider detection with multiple patterns
-        if ("anthropic" in error_lower or
-            re.search(r'sk-ant-[a-zA-Z0-9_-]+', error_str, re.IGNORECASE) or
-            "claude" in error_lower):
+        # Check OpenRouter first since it may contain "openai" in model names
+        if "openrouter" in error_lower or re.search(r'sk-or-v1-[a-zA-Z0-9_-]+', error_str, re.IGNORECASE):
+            return "openrouter"
+        elif (
+            "anthropic" in error_lower
+            or re.search(r'sk-ant-[a-zA-Z0-9_-]+', error_str, re.IGNORECASE)
+            or "claude" in error_lower
+        ):
             return "anthropic"
-        elif ("google" in error_lower or
-              re.search(r'AIza[a-zA-Z0-9_-]+', error_str, re.IGNORECASE) or
-              "googleapis" in error_lower or
-              "vertex" in error_lower):
+        elif (
+            "google" in error_lower
+            or re.search(r'AIza[a-zA-Z0-9_-]+', error_str, re.IGNORECASE)
+            or "googleapis" in error_lower
+            or "vertex" in error_lower
+        ):
             return "google"
-        elif ("openai" in error_lower or
-              re.search(r'sk-[a-zA-Z0-9]{48}', error_str, re.IGNORECASE) or
-              "gpt" in error_lower):
+        elif (
+            "openai" in error_lower
+            or re.search(r'sk-[a-zA-Z0-9]{48}', error_str, re.IGNORECASE)
+            or "gpt" in error_lower
+        ):
             return "openai"
         else:
             return "openai"  # Safe default

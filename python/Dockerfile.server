@@ -12,10 +12,10 @@ RUN apt-get update && apt-get install -y \
 # Copy pyproject.toml and uv.lock for dependency installation
 COPY pyproject.toml uv.lock ./
 
-# Install server dependencies to a virtual environment using uv
-ENV UV_PROJECT_ENVIRONMENT=/venv
+# Install base dependencies (includes structlog) and server groups
 RUN uv venv /venv && \
-    uv sync --frozen --no-install-project --group server --group server-reranking
+    . /venv/bin/activate && \
+    uv pip install . --group server --group server-reranking
 
 # Runtime stage
 FROM python:3.12-slim
@@ -58,8 +58,9 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 # Install Playwright browsers using Python module
 RUN /venv/bin/python -m playwright install chromium
 
-# Copy server code and tests
+# Copy server code, agent work orders, and tests
 COPY src/server/ src/server/
+COPY src/agent_work_orders/ src/agent_work_orders/
 COPY src/__init__.py src/
 COPY tests/ tests/
 
@@ -77,4 +78,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD sh -c "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${ARCHON_SERVER_PORT}/health')\""
 
 # Run the Server service
-CMD sh -c "python -m uvicorn src.server.main:socket_app --host 0.0.0.0 --port ${ARCHON_SERVER_PORT} --workers 1"
+CMD sh -c "python -m uvicorn src.server.main:app --host 0.0.0.0 --port ${ARCHON_SERVER_PORT} --workers 1"

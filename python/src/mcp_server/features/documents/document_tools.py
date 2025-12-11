@@ -47,7 +47,7 @@ def register_document_tools(mcp: FastMCP):
     ) -> str:
         """
         Find and search documents (consolidated: list + search + get).
-        
+
         Args:
             project_id: Project UUID (required)
             document_id: Get specific document (returns full content)
@@ -55,10 +55,10 @@ def register_document_tools(mcp: FastMCP):
             document_type: Filter by type (spec/design/note/prp/api/guide)
             page: Page number for pagination
             per_page: Items per page (default: 10)
-        
+
         Returns:
             JSON array of documents or single document
-        
+
         Examples:
             find_documents(project_id="p-1")  # All project docs
             find_documents(project_id="p-1", query="api")  # Search
@@ -152,7 +152,7 @@ def register_document_tools(mcp: FastMCP):
     ) -> str:
         """
         Manage documents (consolidated: create/update/delete).
-        
+
         Args:
             action: "create" | "update" | "delete"
             project_id: Project UUID (required)
@@ -162,12 +162,12 @@ def register_document_tools(mcp: FastMCP):
             content: Structured JSON content
             tags: List of tags (e.g. ["backend", "auth"])
             author: Document author name
-        
+
         Examples:
             manage_document("create", project_id="p-1", title="API Spec", document_type="spec")
             manage_document("update", project_id="p-1", document_id="d-1", content={...})
             manage_document("delete", project_id="p-1", document_id="d-1")
-        
+
         Returns: {success: bool, document?: object, message: string}
         """
         try:

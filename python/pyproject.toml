@@ -62,7 +62,9 @@ server = [
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
-    "docker>=6.1.0",
+    # OPTIONAL: Docker SDK only needed for legacy Docker socket monitoring mode
+    # Uncomment if ENABLE_DOCKER_SOCKET_MONITORING=true (not recommended - security risk)
+    # "docker>=6.1.0",
     "tldextract>=5.0.0",
     # Logging
     "logfire>=0.30.0",
@@ -95,7 +97,7 @@ mcp = [
     "fastapi>=0.104.0",
 ]
 
-# Agents container dependencies
+# Agents container dependencies (ML/reranking service)
 agents = [
     "pydantic-ai>=0.0.13",
     "pydantic>=2.0.0",
@@ -104,6 +106,18 @@ agents = [
     "httpx>=0.24.0",
     "python-dotenv>=1.0.0",
     "structlog>=23.1.0",
+]
+
+# Agent Work Orders container dependencies (workflow orchestration service)
+agent-work-orders = [
+    "fastapi>=0.119.1",
+    "uvicorn>=0.38.0",
+    "pydantic>=2.12.3",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.1.1",
+    "structlog>=25.4.0",
+    "sse-starlette>=2.3.3",
+    "supabase==2.15.1",
 ]
 
 # All dependencies for running unit tests locally
@@ -128,7 +142,9 @@ all = [
     "python-jose[cryptography]>=3.3.0",
     "cryptography>=41.0.0",
     "slowapi>=0.1.9",
-    "docker>=6.1.0",
+    # OPTIONAL: Docker SDK only needed for legacy Docker socket monitoring mode
+    # Uncomment if ENABLE_DOCKER_SOCKET_MONITORING=true (not recommended - security risk)
+    # "docker>=6.1.0",
     "tldextract>=5.0.0",
     "logfire>=0.30.0",
     # MCP specific (mcp version)
@@ -136,6 +152,8 @@ all = [
     # Agents specific
     "pydantic-ai>=0.0.13",
     "structlog>=23.1.0",
+    # Agent Work Orders specific
+    "sse-starlette>=2.3.3",
     # Shared utilities
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
@@ -195,10 +213,6 @@ warn_redundant_casts = true     # Warn about unnecessary casts
 warn_unused_ignores = true      # Warn about unused type: ignore comments
 strict_equality = true          # Strict equality checks (e.g., == None)
 
-[[tool.mypy.overrides]]
-module = "bs4.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "markdownify.*"
+# Third-party libraries often don't have type stubs
+# We'll explicitly type our own code but not fail on external libs
 ignore_missing_imports = true

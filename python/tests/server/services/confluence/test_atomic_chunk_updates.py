@@ -9,8 +9,9 @@ Tests cover:
 - Metrics tracking for atomic operations
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, call
 
 from src.server.services.confluence.confluence_sync_service import ConfluenceSyncService
 

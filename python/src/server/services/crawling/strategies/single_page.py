@@ -21,7 +21,7 @@ class SinglePageCrawlStrategy:
     def __init__(self, crawler, markdown_generator):
         """
         Initialize single page crawl strategy.
-        
+
         Args:
             crawler (AsyncWebCrawler): The Crawl4AI crawler instance for web crawling operations
             markdown_generator (DefaultMarkdownGenerator): The markdown generator instance for converting HTML to markdown
@@ -63,13 +63,13 @@ class SinglePageCrawlStrategy:
     ) -> dict[str, Any]:
         """
         Crawl a single web page and return the result with retry logic.
-        
+
         Args:
             url: URL of the web page to crawl
             transform_url_func: Function to transform URLs (e.g., GitHub URLs)
             is_documentation_site_func: Function to check if URL is a documentation site
             retry_count: Number of retry attempts
-            
+
         Returns:
             Dict with success status, content, and metadata
         """
@@ -244,7 +244,7 @@ class SinglePageCrawlStrategy:
             ValueError: If start_progress or end_progress are invalid
         """
         # Validate progress parameters before any async work or progress reporting
-        if not isinstance(start_progress, (int, float)) or not isinstance(end_progress, (int, float)):
+        if not isinstance(start_progress, int | float) or not isinstance(end_progress, int | float):
             raise ValueError(
                 f"start_progress and end_progress must be int or float, "
                 f"got start_progress={type(start_progress).__name__}, end_progress={type(end_progress).__name__}"

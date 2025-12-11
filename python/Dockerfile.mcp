@@ -6,11 +6,13 @@ WORKDIR /app
 # Install uv
 RUN pip install --no-cache-dir uv
 
-# Copy pyproject.toml for dependency installation
-COPY pyproject.toml .
+# Copy pyproject.toml and uv.lock for dependency installation
+COPY pyproject.toml uv.lock ./
 
 # Install only mcp dependencies using uv
-RUN uv pip install --system --group mcp
+ENV UV_PROJECT_ENVIRONMENT=/venv
+RUN uv venv /venv && \
+    uv sync --frozen --no-install-project --group mcp
 
 # Create minimal directory structure
 RUN mkdir -p src/mcp_server/features/projects src/mcp_server/features/tasks src/mcp_server/features/documents src/server/services src/server/config
@@ -32,6 +34,7 @@ COPY src/server/config/logfire_config.py src/server/config/
 # Set environment variables
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/venv/bin:$PATH"
 
 # Expose MCP port
 ARG ARCHON_MCP_PORT=8051

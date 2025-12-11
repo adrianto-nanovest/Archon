@@ -6,11 +6,13 @@ WORKDIR /app
 # Install uv
 RUN pip install --no-cache-dir uv
 
-# Copy pyproject.toml for dependency installation
-COPY pyproject.toml .
+# Copy pyproject.toml and uv.lock for dependency installation
+COPY pyproject.toml uv.lock ./
 
 # Install only agents dependencies using uv
-RUN uv pip install --system --group agents
+ENV UV_PROJECT_ENVIRONMENT=/venv
+RUN uv venv /venv && \
+    uv sync --frozen --no-install-project --group agents
 
 # Copy agents code - no dependencies on server code
 # Agents use MCP tools for all operations
@@ -20,6 +22,7 @@ COPY src/__init__.py src/
 # Set environment variables
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV PYTHONUNBUFFERED=1
+ENV PATH="/venv/bin:$PATH"
 
 # Expose Agents port
 ARG ARCHON_AGENTS_PORT=8052

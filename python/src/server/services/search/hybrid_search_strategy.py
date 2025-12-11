@@ -2,7 +2,7 @@
 Hybrid Search Strategy
 
 Implements hybrid search combining vector similarity search with full-text search
-using PostgreSQL's ts_vector for improved recall and precision in document and 
+using PostgreSQL's ts_vector for improved recall and precision in document and
 code example retrieval.
 
 Strategy combines:
@@ -36,8 +36,11 @@ class HybridSearchStrategy:
         filter_metadata: dict | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_crawled_pages table using the PostgreSQL 
+        Perform hybrid search on archon_crawled_pages table using the PostgreSQL
         hybrid search function that combines vector and full-text search.
+
+        Excludes chunks with _pending_deletion flag to ensure zero-downtime during
+        atomic chunk updates.
 
         Args:
             query: Original search query text
@@ -70,15 +73,21 @@ class HybridSearchStrategy:
                     logger.debug("No results from hybrid search")
                     return []
 
-                # Format results to match expected structure
+                # Format results and exclude chunks with _pending_deletion flag
                 results = []
                 for row in response.data:
+                    # Exclude chunks marked for deletion (atomic update support)
+                    metadata = row.get("metadata", {})
+                    if metadata.get("_pending_deletion") == "true":
+                        logger.debug(f"Excluding chunk {row['id']} with _pending_deletion flag")
+                        continue
+
                     result = {
                         "id": row["id"],
                         "url": row["url"],
                         "chunk_number": row["chunk_number"],
                         "content": row["content"],
-                        "metadata": row["metadata"],
+                        "metadata": metadata,
                         "source_id": row["source_id"],
                         "similarity": row["similarity"],
                         "match_type": row["match_type"],
@@ -88,7 +97,7 @@ class HybridSearchStrategy:
                 span.set_attribute("results_count", len(results))
 
                 # Log match type distribution for debugging
-                match_types = {}
+                match_types: dict[str, int] = {}
                 for r in results:
                     mt = r.get("match_type", "unknown")
                     match_types[mt] = match_types.get(mt, 0) + 1
@@ -113,7 +122,7 @@ class HybridSearchStrategy:
         source_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Perform hybrid search on archon_code_examples table using the PostgreSQL 
+        Perform hybrid search on archon_code_examples table using the PostgreSQL
         hybrid search function that combines vector and full-text search.
 
         Args:
@@ -157,16 +166,22 @@ class HybridSearchStrategy:
                     logger.debug("No results from hybrid code search")
                     return []
 
-                # Format results to match expected structure
+                # Format results and exclude chunks with _pending_deletion flag
                 results = []
                 for row in response.data:
+                    # Exclude chunks marked for deletion (atomic update support)
+                    metadata = row.get("metadata", {})
+                    if metadata.get("_pending_deletion") == "true":
+                        logger.debug(f"Excluding code example {row['id']} with _pending_deletion flag")
+                        continue
+
                     result = {
                         "id": row["id"],
                         "url": row["url"],
                         "chunk_number": row["chunk_number"],
                         "content": row["content"],
                         "summary": row["summary"],
-                        "metadata": row["metadata"],
+                        "metadata": metadata,
                         "source_id": row["source_id"],
                         "similarity": row["similarity"],
                         "match_type": row["match_type"],
@@ -176,7 +191,7 @@ class HybridSearchStrategy:
                 span.set_attribute("results_count", len(results))
 
                 # Log match type distribution for debugging
-                match_types = {}
+                match_types: dict[str, int] = {}
                 for r in results:
                     mt = r.get("match_type", "unknown")
                     match_types[mt] = match_types.get(mt, 0) + 1

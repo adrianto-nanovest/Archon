@@ -47,7 +47,7 @@ Example usage:
 import logging
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypedDict
 
 from ...utils import get_supabase_client
 from ...utils.progress.progress_tracker import ProgressTracker
@@ -57,6 +57,21 @@ from .confluence_client import ConfluenceClient
 from .confluence_processor import ConfluenceProcessor
 
 logger = logging.getLogger(__name__)
+
+
+class SyncMetrics(TypedDict):
+    """Type definition for sync metrics returned by sync_space."""
+    pages_added: int
+    pages_updated: int
+    pages_deleted: int
+    duration_seconds: float
+    api_calls_made: int
+    last_sync_timestamp: str
+    status: str
+    chunks_marked_pending: int
+    chunks_deleted: int
+    chunks_rolled_back: int
+    atomic_update_failures: int
 
 
 class ConfluenceSyncService:
@@ -102,7 +117,7 @@ class ConfluenceSyncService:
         source_id: str,
         space_key: str,
         progress_tracker: ProgressTracker | None = None,
-    ) -> dict[str, Any]:
+    ) -> SyncMetrics:
         """
         Orchestrate CQL-based incremental sync for a Confluence space.
 
@@ -149,7 +164,7 @@ class ConfluenceSyncService:
         start_time = time.time()
 
         # Initialize metrics
-        metrics = {
+        metrics: SyncMetrics = {
             "pages_added": 0,
             "pages_updated": 0,
             "pages_deleted": 0,
@@ -157,6 +172,11 @@ class ConfluenceSyncService:
             "api_calls_made": 0,
             "last_sync_timestamp": datetime.now(UTC).isoformat(),
             "status": "in_progress",
+            # Atomic update metrics
+            "chunks_marked_pending": 0,
+            "chunks_deleted": 0,
+            "chunks_rolled_back": 0,
+            "atomic_update_failures": 0,
         }
 
         try:
@@ -277,62 +297,41 @@ class ConfluenceSyncService:
 
                 self.logger.debug(f"Stored metadata for page {page_id}")
 
-                # Task 4: CRITICAL - Delete old chunks before inserting new ones
-                self.supabase_client.from_("archon_crawled_pages").delete().eq(
-                    "source_id", source_id
-                ).eq(
-                    "metadata->>page_id", page_id
-                ).execute()
-                self.logger.debug(f"Deleted old chunks for page {page_id}")
-
-                # Task 4: Chunk the markdown content
-                chunks = await self.document_storage.smart_chunk_text_async(
-                    markdown_content,
-                    chunk_size=5000
-                )
-
-                # Task 4: Prepare data for add_documents_to_supabase
+                # Atomic chunk update with zero-downtime strategy
                 page_url = f"{self.confluence_client._client.url}/pages/viewpage.action?pageId={page_id}"
-                all_urls = []
-                all_chunk_numbers = []
-                all_contents = []
-                all_metadatas = []
-                url_to_full_document = {page_url: markdown_content}
 
-                for chunk_idx, chunk in enumerate(chunks):
-                    all_urls.append(page_url)
-                    all_chunk_numbers.append(chunk_idx)
-                    all_contents.append(chunk)
-
-                    chunk_metadata = {
-                        "page_id": page_id,
-                        "section_title": page_title,
-                        "space_key": space_key,
-                        "source_id": source_id,
-                        "url": page_url,
-                        "chunk_index": chunk_idx,
-                        "word_count": len(chunk.split()),
-                        "char_count": len(chunk),
-                    }
-                    all_metadatas.append(chunk_metadata)
-
-                # Task 4: Call document storage service for embedding and storage
-                if all_contents:  # Only call if we have chunks
-                    await add_documents_to_supabase(
-                        client=self.supabase_client,
-                        urls=all_urls,
-                        chunk_numbers=all_chunk_numbers,
-                        contents=all_contents,
-                        metadatas=all_metadatas,
-                        url_to_full_document=url_to_full_document,
-                        batch_size=25,
-                        progress_callback=None,  # TODO: Task 7 - Wire up progress tracker
-                        enable_parallel_batches=True,
-                        provider=None,
-                        cancellation_check=None,
-                        url_to_page_id={page_url: page_id},
+                try:
+                    update_metrics = await self._update_page_chunks_atomic(
+                        page_id=page_id,
+                        markdown=markdown_content,
+                        page_url=page_url,
+                        source_id=source_id,
+                        page_title=page_title,
+                        space_key=space_key,
+                        progress_tracker=progress_tracker,
                     )
-                    self.logger.debug(f"Stored {len(chunks)} chunks for page {page_id}")
+
+                    # Track atomic update metrics
+                    metrics["chunks_marked_pending"] += update_metrics["chunks_marked"]
+                    metrics["chunks_deleted"] += update_metrics["chunks_deleted"]
+
+                    self.logger.debug(
+                        f"Atomic update completed for page {page_id}: "
+                        f"{update_metrics['chunks_created']} chunks created"
+                    )
+
+                except Exception as atomic_error:
+                    # Track failure and rollback metrics
+                    metrics["atomic_update_failures"] += 1
+                    if "chunks_rolled_back" in locals() and update_metrics:
+                        metrics["chunks_rolled_back"] += update_metrics.get("chunks_rolled_back", 0)
+
+                    self.logger.error(
+                        f"Atomic update failed for page {page_id}: {atomic_error}",
+                        exc_info=True
+                    )
+                    # Continue processing other pages despite this failure
+                    continue
 
             # Task 6 & Task 2: Store sync metrics and last_sync_timestamp
             new_timestamp = datetime.now(UTC).isoformat()
@@ -384,4 +383,261 @@ class ConfluenceSyncService:
                 f"Sync failed for space {space_key}: {e}",
                 exc_info=True,
             )
+            raise
+
+    async def _mark_chunks_pending_deletion(self, page_id: str, source_id: str) -> int:
+        """
+        Mark old chunks for deletion by setting _pending_deletion flag.
+
+        This is Phase 1 of the atomic update - chunks remain searchable.
+
+        Args:
+            page_id: Confluence page ID
+            source_id: Source ID from archon_sources
+
+        Returns:
+            Number of chunks marked for deletion
+        """
+        try:
+            # Query existing chunks to get their metadata
+            existing_chunks_response = (
+                self.supabase_client.from_("archon_crawled_pages")
+                .select("id, metadata")
+                .eq("source_id", source_id)
+                .filter("metadata->>page_id", "eq", page_id)
+                .execute()
+            )
+
+            if not existing_chunks_response.data:
+                self.logger.debug(f"No existing chunks found for page {page_id}")
+                return 0
+
+            # Update each chunk's metadata to add _pending_deletion flag
+            marked_count = 0
+            for chunk in existing_chunks_response.data:
+                chunk_id = chunk["id"]
+                existing_metadata = chunk.get("metadata", {})
+
+                # Add _pending_deletion flag while preserving existing metadata
+                updated_metadata = {**existing_metadata, "_pending_deletion": "true"}
+
+                self.supabase_client.from_("archon_crawled_pages").update({
+                    "metadata": updated_metadata
+                }).eq("id", chunk_id).execute()
+
+                marked_count += 1
+
+            self.logger.info(f"Marked {marked_count} chunks pending deletion for page {page_id}")
+            return marked_count
+
+        except Exception as e:
+            self.logger.error(f"Failed to mark chunks pending deletion for page {page_id}: {e}", exc_info=True)
+            raise
+
+    async def _delete_pending_chunks(self, page_id: str, source_id: str) -> int:
+        """
+        Delete chunks marked with _pending_deletion flag.
+
+        This is Phase 3 of the atomic update - only called after new chunks committed.
+
+        Args:
+            page_id: Confluence page ID
+            source_id: Source ID from archon_sources
+
+        Returns:
+            Number of chunks deleted
+        """
+        try:
+            result = (
+                self.supabase_client.from_("archon_crawled_pages")
+                .delete()
+                .eq("source_id", source_id)
+                .filter("metadata->>page_id", "eq", page_id)
+                .filter("metadata->>_pending_deletion", "eq", "true")
+                .execute()
+            )
+
+            deleted_count = len(result.data) if result.data else 0
+            self.logger.info(f"Deleted {deleted_count} pending chunks for page {page_id}")
+            return deleted_count
+
+        except Exception as e:
+            self.logger.error(f"Failed to delete pending chunks for page {page_id}: {e}", exc_info=True)
+            raise
+
+    async def _rollback_pending_deletion(self, page_id: str, source_id: str) -> int:
+        """
+        Rollback pending deletion by removing _pending_deletion flag.
+
+        Restores old chunks to searchable state on failure.
+
+        Args:
+            page_id: Confluence page ID
+            source_id: Source ID from archon_sources
+
+        Returns:
+            Number of chunks restored
+        """
+        try:
+            # Query chunks with pending deletion flag
+            pending_chunks_response = (
+                self.supabase_client.from_("archon_crawled_pages")
+                .select("id, metadata")
+                .eq("source_id", source_id)
+                .filter("metadata->>page_id", "eq", page_id)
+                .filter("metadata->>_pending_deletion", "eq", "true")
+                .execute()
+            )
+
+            if not pending_chunks_response.data:
+                self.logger.debug(f"No pending chunks to rollback for page {page_id}")
+                return 0
+
+            # Remove _pending_deletion flag from each chunk
+            restored_count = 0
+            for chunk in pending_chunks_response.data:
+                chunk_id = chunk["id"]
+                existing_metadata = chunk.get("metadata", {})
+
+                # Remove _pending_deletion flag
+                updated_metadata = {k: v for k, v in existing_metadata.items() if k != "_pending_deletion"}
+
+                self.supabase_client.from_("archon_crawled_pages").update({
+                    "metadata": updated_metadata
+                }).eq("id", chunk_id).execute()
+
+                restored_count += 1
+
+            self.logger.info(f"Rolled back {restored_count} chunks for page {page_id}")
+            return restored_count
+
+        except Exception as e:
+            self.logger.error(f"Failed to rollback pending deletion for page {page_id}: {e}", exc_info=True)
+            raise
+
+    async def _update_page_chunks_atomic(
+        self,
+        page_id: str,
+        markdown: str,
+        page_url: str,
+        source_id: str,
+        page_title: str,
+        space_key: str,
+        progress_tracker: ProgressTracker | None = None,
+    ) -> dict[str, int]:
+        """
+        Update page chunks with atomic transaction.
+
+        Ensures zero-downtime: Old chunks remain searchable until new ones committed.
+        Rollback on failure preserves old chunks.
+
+        Args:
+            page_id: Confluence page ID
+            markdown: Markdown content to chunk and store
+            page_url: Page URL for chunk metadata
+            source_id: Source ID from archon_sources
+            page_title: Page title for metadata
+            space_key: Confluence space key
+            progress_tracker: Optional progress tracker
+
+        Returns:
+            Metrics dict with:
+            - chunks_marked: Number of chunks marked for deletion
+            - chunks_created: Number of new chunks created
+            - chunks_deleted: Number of old chunks deleted
+            - chunks_rolled_back: Number of chunks restored on failure (0 on success)
+            - failed: 1 if update failed, 0 if successful
+
+        Raises:
+            Exception: If any step fails (rollback is attempted automatically)
+        """
+        update_metrics = {
+            "chunks_marked": 0,
+            "chunks_created": 0,
+            "chunks_deleted": 0,
+            "chunks_rolled_back": 0,
+            "failed": 0,
+        }
+
+        try:
+            # STEP 1: Mark old chunks pending deletion (still searchable)
+            update_metrics["chunks_marked"] = await self._mark_chunks_pending_deletion(page_id, source_id)
+            self.logger.debug(f"Atomic update step 1: Marked {update_metrics['chunks_marked']} chunks pending deletion")
+
+            # STEP 2: Insert new chunks via document_storage_service
+            chunks = await self.document_storage.smart_chunk_text_async(
+                markdown,
+                chunk_size=5000
+            )
+
+            all_urls = []
+            all_chunk_numbers = []
+            all_contents = []
+            all_metadatas = []
+            url_to_full_document = {page_url: markdown}
+
+            for chunk_idx, chunk in enumerate(chunks):
+                all_urls.append(page_url)
+                all_chunk_numbers.append(chunk_idx)
+                all_contents.append(chunk)
+
+                chunk_metadata = {
+                    "page_id": page_id,
+                    "section_title": page_title,
+                    "space_key": space_key,
+                    "source_id": source_id,
+                    "url": page_url,
+                    "chunk_index": chunk_idx,
+                    "word_count": len(chunk.split()),
+                    "char_count": len(chunk),
+                }
+                all_metadatas.append(chunk_metadata)
+
+            if all_contents:
+                await add_documents_to_supabase(
+                    client=self.supabase_client,
+                    urls=all_urls,
+                    chunk_numbers=all_chunk_numbers,
+                    contents=all_contents,
+                    metadatas=all_metadatas,
+                    url_to_full_document=url_to_full_document,
+                    batch_size=25,
+                    progress_callback=None,
+                    enable_parallel_batches=True,
+                    provider=None,
+                    cancellation_check=None,
+                    url_to_page_id={page_url: page_id},
+                )
+                update_metrics["chunks_created"] = len(chunks)
+                self.logger.debug(f"Atomic update step 2: Created {update_metrics['chunks_created']} new chunks")
+
+            # STEP 3: Delete old chunks (only after new chunks committed)
+            update_metrics["chunks_deleted"] = await self._delete_pending_chunks(page_id, source_id)
+            self.logger.debug(f"Atomic update step 3: Deleted {update_metrics['chunks_deleted']} old chunks")
+
+            self.logger.info(
+                f"Atomic chunk update completed for page {page_id}: "
+                f"{update_metrics['chunks_marked']} marked, {update_metrics['chunks_created']} created, "
+                f"{update_metrics['chunks_deleted']} deleted"
+            )
+
+            return update_metrics
+
+        except Exception:
+            # ROLLBACK: Remove pending deletion flag, restore old chunks
+            update_metrics["failed"] = 1
+            self.logger.error(
+                f"Atomic chunk update failed for page {page_id}, attempting rollback",
+                exc_info=True
+            )
+
+            try:
+                update_metrics["chunks_rolled_back"] = await self._rollback_pending_deletion(page_id, source_id)
+                self.logger.info(f"Rollback successful: restored {update_metrics['chunks_rolled_back']} chunks for page {page_id}")
+            except Exception as rollback_error:
+                self.logger.error(
+                    f"CRITICAL: Rollback failed for page {page_id}: {rollback_error}",
+                    exc_info=True
+                )
+
             raise

@@ -38,15 +38,17 @@
 - **Progress Tracking**: `python/src/server/services/progress_tracker.py`
   - **REUSE THIS** for sync status updates
 
-### Files to CREATE for Confluence (New ~800 lines)
+### Confluence Integration Files (Implemented)
 - `python/src/server/services/confluence/confluence_client.py` - Atlassian API client
 - `python/src/server/services/confluence/confluence_sync_service.py` - CQL-based sync logic
-- `python/src/server/services/confluence/confluence_processor.py` - HTML → Markdown conversion
+- `python/src/server/services/confluence/confluence_processor.py` - HTML → Markdown five-pass pipeline
+- `python/src/server/services/confluence/macro_handlers/` - Confluence macro processors
+- `python/src/server/services/confluence/element_handlers/` - HTML element processors
+- `python/src/server/services/confluence/utils/` - Shared utilities
 - `python/src/server/api_routes/confluence_api.py` - REST endpoints
 - `migration/0.1.0/901_add_confluence_pages.sql` - Database migration
 
-### Files to MODIFY (Minimal Changes)
-- `python/src/server/services/knowledge/knowledge_item_service.py` - Add 'confluence' source type
-- Optional: `python/src/server/services/search/hybrid_search_strategy.py` - Add Confluence metadata JOIN
+### Files Modified for Confluence
+- `python/src/server/services/search/hybrid_search_strategy.py` - Confluence metadata JOIN support
 
 ---

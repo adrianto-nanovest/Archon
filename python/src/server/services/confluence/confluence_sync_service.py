@@ -12,6 +12,7 @@ Key Features:
 - Automatic chunking and embedding via document_storage_service
 - Sync metrics tracking (pages added/updated/deleted, duration, API calls)
 - Progress tracking for real-time status updates
+- Configurable deletion detection strategies (weekly, every_sync, on_demand)
 
 Example usage:
     ```python
@@ -46,7 +47,9 @@ Example usage:
 
 import logging
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any, TypedDict
 
 from ...utils import get_supabase_client
@@ -59,8 +62,42 @@ from .confluence_processor import ConfluenceProcessor
 logger = logging.getLogger(__name__)
 
 
+class DeletionStrategy(str, Enum):
+    """Configurable deletion detection strategies for Confluence sync.
+
+    Each strategy balances API efficiency vs. data freshness:
+    - WEEKLY_RECONCILIATION: Minimizes API calls (1 per week), deleted pages remain up to 7 days
+    - EVERY_SYNC: Immediate detection (1 extra API call per sync), best for critical spaces
+    - ON_DEMAND: Zero API overhead during sync, user triggers deletion detection manually
+    """
+
+    WEEKLY_RECONCILIATION = "weekly_reconciliation"  # Check once per week (default)
+    EVERY_SYNC = "every_sync"  # Check every sync cycle
+    ON_DEMAND = "on_demand"  # Never auto-check, manual trigger only
+
+
+@dataclass
+class DeletionEvent:
+    """Records a page deletion event for logging and auditing.
+
+    Attributes:
+        page_id: Confluence page ID that was deleted
+        title: Page title at time of deletion
+        deletion_timestamp: ISO 8601 timestamp when deletion was detected
+        source_id: archon_sources.source_id for this Confluence space
+        space_key: Confluence space key (e.g., "DEVDOCS")
+    """
+
+    page_id: str
+    title: str
+    deletion_timestamp: str
+    source_id: str
+    space_key: str
+
+
 class SyncMetrics(TypedDict):
     """Type definition for sync metrics returned by sync_space."""
+
     pages_added: int
     pages_updated: int
     pages_deleted: int
@@ -68,10 +105,15 @@ class SyncMetrics(TypedDict):
     api_calls_made: int
     last_sync_timestamp: str
     status: str
+    # Atomic update metrics
     chunks_marked_pending: int
     chunks_deleted: int
     chunks_rolled_back: int
     atomic_update_failures: int
+    # Deletion detection metrics (Story 3.3)
+    deletion_strategy: str  # Strategy used for this sync
+    deletion_check_performed: bool  # Whether deletion check ran
+    last_deletion_check: str | None  # ISO timestamp of last check
 
 
 class ConfluenceSyncService:
@@ -111,6 +153,416 @@ class ConfluenceSyncService:
         self.supabase_client = supabase_client or get_supabase_client()
         self.document_storage = DocumentStorageService(self.supabase_client)
         self.logger = logging.getLogger("ConfluenceSyncService")
+
+    async def _get_deletion_strategy(self, source_id: str) -> DeletionStrategy:
+        """
+        Retrieve the deletion detection strategy for a source.
+
+        Queries archon_sources.metadata->>'deletion_strategy' and returns the
+        configured strategy. Defaults to WEEKLY_RECONCILIATION if not set.
+
+        Args:
+            source_id: Source ID from archon_sources table
+
+        Returns:
+            DeletionStrategy enum value
+
+        Example:
+            >>> strategy = await sync_service._get_deletion_strategy("src_123")
+            >>> if strategy == DeletionStrategy.EVERY_SYNC:
+            ...     # Run deletion detection
+        """
+        try:
+            response = (
+                self.supabase_client.from_("archon_sources")
+                .select("metadata")
+                .eq("source_id", source_id)
+                .execute()
+            )
+
+            if response.data and len(response.data) > 0:
+                metadata = response.data[0].get("metadata", {})
+                if isinstance(metadata, dict):
+                    strategy_value = metadata.get("deletion_strategy")
+                    if strategy_value:
+                        try:
+                            strategy = DeletionStrategy(strategy_value)
+                            self.logger.debug(
+                                f"Deletion strategy for source {source_id}: {strategy.value}"
+                            )
+                            return strategy
+                        except ValueError:
+                            self.logger.warning(
+                                f"Invalid deletion_strategy '{strategy_value}' for source {source_id}, "
+                                f"using default: weekly_reconciliation"
+                            )
+
+            # Default to weekly reconciliation
+            self.logger.debug(
+                f"No deletion_strategy configured for source {source_id}, "
+                f"using default: weekly_reconciliation"
+            )
+            return DeletionStrategy.WEEKLY_RECONCILIATION
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to get deletion strategy for source {source_id}: {e}",
+                exc_info=True
+            )
+            # Default to weekly reconciliation on error
+            return DeletionStrategy.WEEKLY_RECONCILIATION
+
+    async def _check_weekly_reconciliation(self, source_id: str, space_key: str) -> bool:
+        """
+        Check if deletion detection should run for weekly_reconciliation strategy.
+
+        Retrieves last_deletion_check from archon_sources.metadata and determines
+        if 7+ days have passed since the last check.
+
+        Args:
+            source_id: Source ID from archon_sources table
+            space_key: Confluence space key (for logging)
+
+        Returns:
+            True if deletion check should run (NULL or >= 7 days), False otherwise
+
+        Example:
+            >>> should_check = await sync_service._check_weekly_reconciliation("src_123", "DEVDOCS")
+            >>> if should_check:
+            ...     deleted_ids = await sync_service._detect_deleted_pages_every_sync(...)
+        """
+        try:
+            response = (
+                self.supabase_client.from_("archon_sources")
+                .select("metadata")
+                .eq("source_id", source_id)
+                .execute()
+            )
+
+            if response.data and len(response.data) > 0:
+                metadata = response.data[0].get("metadata", {})
+                if isinstance(metadata, dict):
+                    last_check_str = metadata.get("last_deletion_check")
+                    if last_check_str:
+                        try:
+                            last_check = datetime.fromisoformat(last_check_str.replace("Z", "+00:00"))
+                            days_since_check = (datetime.now(UTC) - last_check).days
+
+                            if days_since_check < 7:
+                                self.logger.info(
+                                    f"Skipping deletion check for space {space_key}: "
+                                    f"last check {days_since_check} days ago (< 7)"
+                                )
+                                return False
+
+                            self.logger.info(
+                                f"Running deletion check for space {space_key}: "
+                                f"last check {days_since_check} days ago (>= 7)"
+                            )
+                            return True
+
+                        except ValueError as e:
+                            self.logger.warning(
+                                f"Invalid last_deletion_check timestamp '{last_check_str}': {e}, "
+                                f"forcing deletion check"
+                            )
+                            return True
+
+            # First-time sync or no last_deletion_check - force check
+            self.logger.info(
+                f"No last_deletion_check for space {space_key}, running first deletion check"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to check weekly reconciliation for source {source_id}: {e}",
+                exc_info=True
+            )
+            # On error, skip deletion check to avoid disruption
+            return False
+
+    async def _update_last_deletion_check(self, source_id: str) -> None:
+        """
+        Update last_deletion_check timestamp after successful deletion detection.
+
+        Updates archon_sources.metadata->>'last_deletion_check' with current timestamp.
+        Preserves existing metadata fields.
+
+        Args:
+            source_id: Source ID from archon_sources table
+
+        Raises:
+            Exception: If database update fails
+        """
+        try:
+            # First get existing metadata to preserve other fields
+            response = (
+                self.supabase_client.from_("archon_sources")
+                .select("metadata")
+                .eq("source_id", source_id)
+                .execute()
+            )
+
+            existing_metadata: dict[str, Any] = {}
+            if response.data and len(response.data) > 0:
+                existing_metadata = response.data[0].get("metadata", {}) or {}
+
+            # Update with new timestamp
+            updated_metadata = {
+                **existing_metadata,
+                "last_deletion_check": datetime.now(UTC).isoformat(),
+            }
+
+            self.supabase_client.from_("archon_sources").update({
+                "metadata": updated_metadata
+            }).eq("source_id", source_id).execute()
+
+            self.logger.debug(f"Updated last_deletion_check for source {source_id}")
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to update last_deletion_check for source {source_id}: {e}",
+                exc_info=True
+            )
+            raise
+
+    async def _detect_deleted_pages_every_sync(
+        self,
+        source_id: str,
+        space_key: str,
+    ) -> list[str]:
+        """
+        Detect deleted pages by comparing Confluence API with database state.
+
+        Calls get_space_pages_ids() to get current page IDs from Confluence,
+        then compares with confluence_pages table to find deletions.
+
+        Args:
+            source_id: Source ID from archon_sources table
+            space_key: Confluence space key
+
+        Returns:
+            List of page_ids that exist in DB but not in Confluence (deleted)
+
+        Example:
+            >>> deleted_ids = await sync_service._detect_deleted_pages_every_sync(
+            ...     source_id="src_123",
+            ...     space_key="DEVDOCS"
+            ... )
+            >>> print(f"Found {len(deleted_ids)} deleted pages")
+        """
+        try:
+            # Get current page IDs from Confluence API
+            api_page_ids = await self.confluence_client.get_space_pages_ids(space_key)
+            api_page_ids_set = {str(pid) for pid in api_page_ids}
+
+            self.logger.debug(
+                f"Confluence API returned {len(api_page_ids_set)} pages for space {space_key}"
+            )
+
+            # Get page IDs from database (non-deleted pages only)
+            db_response = (
+                self.supabase_client.from_("confluence_pages")
+                .select("page_id")
+                .eq("source_id", source_id)
+                .eq("is_deleted", False)
+                .execute()
+            )
+
+            db_page_ids_set = {
+                row["page_id"] for row in (db_response.data or [])
+            }
+
+            self.logger.debug(
+                f"Database has {len(db_page_ids_set)} non-deleted pages for source {source_id}"
+            )
+
+            # Find pages that exist in DB but not in Confluence (deleted)
+            deleted_page_ids = list(db_page_ids_set - api_page_ids_set)
+
+            if deleted_page_ids:
+                self.logger.info(
+                    f"Deletion detection: {len(deleted_page_ids)} pages no longer in Confluence"
+                )
+            else:
+                self.logger.debug("Deletion detection: no deleted pages found")
+
+            return deleted_page_ids
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to detect deleted pages for source {source_id}: {e}",
+                exc_info=True
+            )
+            raise
+
+    async def _mark_pages_deleted(
+        self,
+        page_ids: list[str],
+        source_id: str,
+        space_key: str,
+    ) -> int:
+        """
+        Mark pages as deleted and remove their chunks from RAG system.
+
+        For each page:
+        1. Set is_deleted = TRUE in confluence_pages table
+        2. Delete chunks from archon_crawled_pages via metadata->>'page_id' filter
+        3. Log deletion event with structured metadata
+
+        Args:
+            page_ids: List of Confluence page IDs to mark as deleted
+            source_id: Source ID from archon_sources table
+            space_key: Confluence space key (for logging)
+
+        Returns:
+            Number of pages successfully marked as deleted
+
+        Note:
+            Continues processing other pages if one fails (no batch rollback).
+            Individual failures are logged but do not stop the deletion process.
+        """
+        deleted_count = 0
+        deletion_timestamp = datetime.now(UTC).isoformat()
+
+        for page_id in page_ids:
+            try:
+                # Get page title for logging before marking deleted
+                page_response = (
+                    self.supabase_client.from_("confluence_pages")
+                    .select("title")
+                    .eq("page_id", page_id)
+                    .execute()
+                )
+                page_title = "Unknown"
+                if page_response.data and len(page_response.data) > 0:
+                    page_title = page_response.data[0].get("title", "Unknown")
+
+                # Mark page as deleted in confluence_pages
+                self.supabase_client.from_("confluence_pages").update({
+                    "is_deleted": True,
+                    "updated_at": deletion_timestamp,
+                }).eq("page_id", page_id).execute()
+
+                # Delete chunks from archon_crawled_pages
+                self.supabase_client.from_("archon_crawled_pages").delete().eq(
+                    "source_id", source_id
+                ).filter("metadata->>page_id", "eq", page_id).execute()
+
+                deleted_count += 1
+
+                # Log deletion event with structured data (Task 6)
+                deletion_event = DeletionEvent(
+                    page_id=page_id,
+                    title=page_title,
+                    deletion_timestamp=deletion_timestamp,
+                    source_id=source_id,
+                    space_key=space_key,
+                )
+                self._log_deletion_event(deletion_event)
+
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to delete page {page_id}: {e}",
+                    exc_info=True
+                )
+                # Continue with other pages (don't fail entire batch)
+                continue
+
+        self.logger.info(
+            f"Marked {deleted_count}/{len(page_ids)} pages as deleted for source {source_id}"
+        )
+        return deleted_count
+
+    def _log_deletion_event(self, event: DeletionEvent) -> None:
+        """
+        Log a deletion event with structured metadata.
+
+        Emits an INFO-level log with extra fields for structured logging systems.
+
+        Args:
+            event: DeletionEvent with page details
+        """
+        self.logger.info(
+            f"Confluence page deleted: {event.title} ({event.page_id})",
+            extra={
+                "page_id": event.page_id,
+                "title": event.title,
+                "deletion_timestamp": event.deletion_timestamp,
+                "source_id": event.source_id,
+                "space_key": event.space_key,
+            }
+        )
+
+    async def check_deletions_on_demand(
+        self,
+        source_id: str,
+        space_key: str,
+    ) -> dict[str, Any]:
+        """
+        Manually trigger deletion detection (public API method).
+
+        This method runs deletion detection regardless of the configured strategy
+        or last_deletion_check timestamp. Use for manual cleanup or API-triggered
+        deletion detection.
+
+        Args:
+            source_id: Source ID from archon_sources table
+            space_key: Confluence space key
+
+        Returns:
+            Dict with deletion metrics:
+            - pages_deleted: int - Number of pages marked as deleted
+            - page_ids: list[str] - IDs of pages marked as deleted
+
+        Example:
+            >>> result = await sync_service.check_deletions_on_demand(
+            ...     source_id="src_123",
+            ...     space_key="DEVDOCS"
+            ... )
+            >>> print(f"Deleted {result['pages_deleted']} pages: {result['page_ids']}")
+        """
+        self.logger.info(f"On-demand deletion detection triggered for space {space_key}")
+
+        try:
+            # Always run deletion detection regardless of strategy/timestamps
+            deleted_page_ids = await self._detect_deleted_pages_every_sync(
+                source_id=source_id,
+                space_key=space_key,
+            )
+
+            if deleted_page_ids:
+                # Mark pages as deleted and remove chunks
+                deleted_count = await self._mark_pages_deleted(
+                    page_ids=deleted_page_ids,
+                    source_id=source_id,
+                    space_key=space_key,
+                )
+            else:
+                deleted_count = 0
+
+            # Update last_deletion_check timestamp
+            await self._update_last_deletion_check(source_id)
+
+            result = {
+                "pages_deleted": deleted_count,
+                "page_ids": deleted_page_ids,
+            }
+
+            self.logger.info(
+                f"On-demand deletion detection completed for space {space_key}: "
+                f"{deleted_count} pages deleted"
+            )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"On-demand deletion detection failed for space {space_key}: {e}",
+                exc_info=True
+            )
+            raise
 
     async def sync_space(
         self,
@@ -177,6 +629,10 @@ class ConfluenceSyncService:
             "chunks_deleted": 0,
             "chunks_rolled_back": 0,
             "atomic_update_failures": 0,
+            # Deletion detection metrics
+            "deletion_strategy": DeletionStrategy.WEEKLY_RECONCILIATION.value,
+            "deletion_check_performed": False,
+            "last_deletion_check": None,
         }
 
         try:
@@ -332,6 +788,50 @@ class ConfluenceSyncService:
                     )
                     # Continue processing other pages despite this failure
                     continue
+
+            # Story 3.3: Run deletion detection based on configured strategy
+            strategy = await self._get_deletion_strategy(source_id)
+            metrics["deletion_strategy"] = strategy.value
+
+            if strategy == DeletionStrategy.EVERY_SYNC:
+                # Always run deletion detection
+                deleted_page_ids = await self._detect_deleted_pages_every_sync(source_id, space_key)
+                metrics["api_calls_made"] += 1  # Track get_space_pages_ids() API call
+                if deleted_page_ids:
+                    deleted_count = await self._mark_pages_deleted(deleted_page_ids, source_id, space_key)
+                    metrics["pages_deleted"] = deleted_count
+                metrics["deletion_check_performed"] = True
+                await self._update_last_deletion_check(source_id)
+
+            elif strategy == DeletionStrategy.WEEKLY_RECONCILIATION:
+                # Only run deletion detection if 7+ days since last check
+                if await self._check_weekly_reconciliation(source_id, space_key):
+                    deleted_page_ids = await self._detect_deleted_pages_every_sync(source_id, space_key)
+                    metrics["api_calls_made"] += 1  # Track get_space_pages_ids() API call
+                    if deleted_page_ids:
+                        deleted_count = await self._mark_pages_deleted(deleted_page_ids, source_id, space_key)
+                        metrics["pages_deleted"] = deleted_count
+                    metrics["deletion_check_performed"] = True
+                    await self._update_last_deletion_check(source_id)
+                else:
+                    self.logger.debug("Skipping deletion detection (weekly strategy, checked recently)")
+                    metrics["deletion_check_performed"] = False
+
+            elif strategy == DeletionStrategy.ON_DEMAND:
+                # Never auto-check, only via manual API call
+                self.logger.debug("Skipping deletion detection (on_demand strategy)")
+                metrics["deletion_check_performed"] = False
+
+            # Fetch last_deletion_check for metrics
+            source_meta_response = (
+                self.supabase_client.from_("archon_sources")
+                .select("metadata")
+                .eq("source_id", source_id)
+                .execute()
+            )
+            if source_meta_response.data and len(source_meta_response.data) > 0:
+                src_metadata = source_meta_response.data[0].get("metadata", {})
+                metrics["last_deletion_check"] = src_metadata.get("last_deletion_check")
 
             # Task 6 & Task 2: Store sync metrics and last_sync_timestamp
             new_timestamp = datetime.now(UTC).isoformat()

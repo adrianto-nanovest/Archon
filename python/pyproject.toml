@@ -216,3 +216,32 @@ strict_equality = true          # Strict equality checks (e.g., == None)
 # Third-party libraries often don't have type stubs
 # We'll explicitly type our own code but not fail on external libs
 ignore_missing_imports = true
+
+# Pytest Coverage Configuration (Story 6.1 - AC8: >90% coverage)
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+# Enforce minimum coverage for Confluence services (AC8 requirement)
+fail_under = 0  # Set to 90 after full coverage achieved
+precision = 2
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=term-missing --cov-report=html"

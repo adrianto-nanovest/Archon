@@ -19,6 +19,8 @@ import { AgentWorkOrderDetailPage } from './pages/AgentWorkOrderDetailPage';
 import { DisconnectScreenOverlay } from './components/DisconnectScreenOverlay';
 import { ErrorBoundaryWithBugReport } from './components/bug-report/ErrorBoundaryWithBugReport';
 import { MigrationBanner } from './components/ui/MigrationBanner';
+import { ChangelogModal } from './features/shared/components/ChangelogModal';
+import { useShowChangelog } from './features/shared/hooks/useShowChangelog';
 import { serverHealthService } from './services/serverHealthService';
 import { useMigrationStatus } from './hooks/useMigrationStatus';
 
@@ -66,6 +68,7 @@ const AppContent = () => {
   });
   const [migrationBannerDismissed, setMigrationBannerDismissed] = useState(false);
   const migrationStatus = useMigrationStatus();
+  const changelog = useShowChangelog();
 
   useEffect(() => {
     // Load initial settings
@@ -119,6 +122,13 @@ const AppContent = () => {
       <DisconnectScreenOverlay
         isActive={disconnectScreenActive && disconnectScreenSettings.enabled}
         onDismiss={handleDismissDisconnectScreen}
+      />
+      <ChangelogModal
+        open={changelog.shouldShow}
+        onOpenChange={(open) => {
+          if (!open) changelog.dismiss();
+        }}
+        version={changelog.version}
       />
     </>
   );

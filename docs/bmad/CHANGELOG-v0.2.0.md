@@ -115,7 +115,7 @@ GET    /api/version/check           # Version checking
 
 ### Confluence Integration Security
 
-- ✅ **Encrypted API Token Storage:** bcrypt-hashed in database
+- ✅ **Encrypted API Token Storage:** Fernet symmetric encryption in database
 - ✅ **Rate Limit Protection:** Exponential backoff (1s/2s/4s)
 - ✅ **CQL Injection Prevention:** Input validation on space keys
 - ✅ **XSS Protection:** HTML sanitization before Markdown conversion
@@ -256,7 +256,7 @@ make test  # Run all tests (backend + frontend + integration)
 
 **v0.2.0 by the numbers:**
 
-- **19 Stories Completed** across 5 epics
+- **21 Stories Completed** across 6 epics
 - **800+ Lines of New Code** (Confluence services)
 - **90% Code Reuse** from existing infrastructure
 - **1,333 Lines of Planning Docs** (CONFLUENCE_RAG_INTEGRATION.md)
@@ -271,21 +271,21 @@ make test  # Run all tests (backend + frontend + integration)
 
 1. **Confluence Server Not Supported:** Only Cloud (atlassian.net) works in v0.2.0
    - Workaround: Use Confluence Cloud or wait for v0.3.0
-   - Tracking: [Issue #123](https://github.com/your-repo/archon/issues/123)
+   - Tracking: [Issue #123](https://github.com/coleam00/Archon/issues/123)
 
 2. **Personal Access Tokens Not Supported:** Only API tokens work
    - Workaround: Generate API token in Atlassian account settings
-   - Tracking: [Issue #124](https://github.com/your-repo/archon/issues/124)
+   - Tracking: [Issue #124](https://github.com/coleam00/Archon/issues/124)
 
 3. **Custom CQL Queries Not Available:** Syncs entire space
    - Workaround: Use Confluence space organization to limit scope
-   - Tracking: [Issue #125](https://github.com/your-repo/archon/issues/125)
+   - Tracking: [Issue #125](https://github.com/coleam00/Archon/issues/125)
 
 ### General
 
 4. **Docling Integration Incomplete:** Advanced PDF processing not available
    - Impact: Basic PDF extraction only (no layout preservation)
-   - Tracking: [Issue #100](https://github.com/your-repo/archon/issues/100)
+   - Tracking: [Issue #100](https://github.com/coleam00/Archon/issues/100)
 
 ---
 
@@ -295,12 +295,12 @@ make test  # Run all tests (backend + frontend + integration)
 
 1. **Read the Docs:** [Confluence Setup Guide](./confluence-user-communication-plan.md)
 2. **Check FAQ:** Common issues and solutions included
-3. **Search Issues:** [GitHub Issues](https://github.com/your-repo/archon/issues)
-4. **Report Bug:** [New Issue](https://github.com/your-repo/archon/issues/new)
+3. **Search Issues:** [GitHub Issues](https://github.com/coleam00/Archon/issues)
+4. **Report Bug:** [New Issue](https://github.com/coleam00/Archon/issues/new)
 5. **Community:** Discord/Slack (if available)
 
 **Security Issues:**
-- Email: security@your-company.com (private disclosure)
+- Report via [GitHub Security Advisories](https://github.com/coleam00/Archon/security/advisories) (private disclosure)
 - Do NOT open public GitHub issues for security vulnerabilities
 
 ---

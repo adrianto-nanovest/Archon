@@ -15,8 +15,9 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from fastapi import APIRouter, File, Form, Header, HTTPException, Response, UploadFile
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 # Basic validation - simplified inline version
 # Import unified logging
@@ -30,6 +31,7 @@ from ..services.search.rag_service import RAGService
 from ..services.storage import DocumentStorageService
 from ..utils import get_supabase_client
 from ..utils.document_processing import extract_text_from_document
+from ..utils.etag_utils import check_etag, generate_etag
 
 # Get logger for this module
 logger = get_logger(__name__)
@@ -173,10 +175,43 @@ class CrawlRequest(BaseModel):
 
 
 class RagQueryRequest(BaseModel):
+    """
+    Request schema for RAG query operations.
+
+    Attributes:
+        query: The search query text
+        source: Optional source domain to filter results
+        match_count: Maximum number of results to return (default: 5)
+        return_mode: "chunks" (default) or "pages"
+        space_key: Optional Confluence space key filter (e.g., "DEVDOCS")
+        jira_issue: Optional JIRA issue key filter (e.g., "PROJ-123")
+        hierarchy_path: Optional Confluence hierarchy path prefix filter (e.g., "/parent123/")
+        mentioned_user: Optional Confluence user account_id filter for mentioned users
+        offset: Number of results to skip for pagination (default: 0)
+        limit: Maximum results per page (default: 50, max: 100)
+
+    Note:
+        Confluence-specific filters (space_key, jira_issue, hierarchy_path, mentioned_user)
+        only apply to search results from Confluence sources. When any of these filters are
+        active, non-Confluence results are excluded from the response.
+
+        Pagination (offset/limit) is applied AFTER all filtering and is useful for
+        paginating through large result sets. Note that pagination is applied at the
+        API level after Confluence filters (post-processing), not at database level.
+    """
+
     query: str
     source: str | None = None
     match_count: int = 5
     return_mode: str = "chunks"  # "chunks" or "pages"
+    # Confluence-specific filters
+    space_key: str | None = None  # Filter by Confluence space key
+    jira_issue: str | None = None  # Filter by linked JIRA issue key
+    hierarchy_path: str | None = None  # Filter by page hierarchy path prefix
+    mentioned_user: str | None = None  # Filter by mentioned user account_id
+    # Pagination support (Story 4.3)
+    offset: int = Field(default=0, ge=0, description="Number of results to skip")
+    limit: int = Field(default=50, ge=1, le=100, description="Max results to return per page")
 
 
 @router.get("/crawl-progress/{progress_id}")
@@ -1092,7 +1127,10 @@ async def _perform_upload_with_progress(
 
 
 @router.post("/knowledge-items/search")
-async def search_knowledge_items(request: RagQueryRequest):
+async def search_knowledge_items(
+    request: RagQueryRequest,
+    if_none_match: str | None = Header(None),
+):
     """Search knowledge items - alias for RAG query."""
     # Validate query
     if not request.query:
@@ -1101,13 +1139,25 @@ async def search_knowledge_items(request: RagQueryRequest):
     if not request.query.strip():
         raise HTTPException(status_code=422, detail="Query cannot be empty")
 
-    # Delegate to the RAG query handler
-    return await perform_rag_query(request)
+    # Delegate to the RAG query handler with ETag header
+    return await perform_rag_query(request, if_none_match)
 
 
 @router.post("/rag/query")
-async def perform_rag_query(request: RagQueryRequest):
-    """Perform a RAG query on the knowledge base using service layer."""
+async def perform_rag_query(
+    request: RagQueryRequest,
+    if_none_match: str | None = Header(None),
+):
+    """
+    Perform a RAG query on the knowledge base using service layer.
+
+    Supports ETag caching for bandwidth optimization. When results haven't changed,
+    returns 304 Not Modified with no body. ETag is generated from search results
+    and has a 30-second stale time (Cache-Control: max-age=30).
+
+    Pagination: Use offset/limit parameters to paginate through large result sets.
+    Pagination is applied AFTER Confluence filters (post-processing).
+    """
     # Validate query
     if not request.query:
         raise HTTPException(status_code=422, detail="Query is required")
@@ -1116,19 +1166,62 @@ async def perform_rag_query(request: RagQueryRequest):
         raise HTTPException(status_code=422, detail="Query cannot be empty")
 
     try:
+        # Build Confluence filters from request if any are specified
+        confluence_filters = None
+        if any([request.space_key, request.jira_issue, request.hierarchy_path, request.mentioned_user]):
+            from ..services.search.hybrid_search_strategy import ConfluenceSearchFilters
+
+            confluence_filters = ConfluenceSearchFilters(
+                space_key=request.space_key,
+                jira_issue=request.jira_issue,
+                hierarchy_path=request.hierarchy_path,
+                mentioned_user=request.mentioned_user,
+            )
+
         # Use RAGService for unified RAG query with return_mode support
         search_service = RAGService(get_supabase_client())
         success, result = await search_service.perform_rag_query(
             query=request.query,
             source=request.source,
             match_count=request.match_count,
-            return_mode=request.return_mode
+            return_mode=request.return_mode,
+            confluence_filters=confluence_filters,
         )
 
         if success:
-            # Add success flag to match expected API response format
+            # Apply pagination AFTER all filtering (Story 4.3)
+            # Pagination is post-processing since Confluence filters are also post-processing
+            all_results = result.get("results", [])
+            total_before_pagination = len(all_results)
+
+            # Apply offset/limit pagination
+            paginated_results = all_results[request.offset : request.offset + request.limit]
+
+            # Update result with pagination info
+            result["results"] = paginated_results
             result["success"] = True
-            return result
+            result["pagination"] = {
+                "offset": request.offset,
+                "limit": request.limit,
+                "total": total_before_pagination,
+                "has_more": request.offset + request.limit < total_before_pagination,
+            }
+
+            # Generate ETag from results for caching (Story 4.3)
+            etag = generate_etag(result)
+
+            # Check if client has current version (If-None-Match header)
+            if check_etag(if_none_match, etag):
+                return Response(status_code=304)
+
+            # Return results with ETag and Cache-Control headers
+            return JSONResponse(
+                content=result,
+                headers={
+                    "ETag": etag,
+                    "Cache-Control": "no-cache, must-revalidate, max-age=30",
+                },
+            )
         else:
             raise HTTPException(
                 status_code=500, detail={"error": result.get("error", "RAG query failed")}
@@ -1139,7 +1232,7 @@ async def perform_rag_query(request: RagQueryRequest):
         safe_logfire_error(
             f"RAG query failed | error={str(e)} | query={request.query[:50]} | source={request.source}"
         )
-        raise HTTPException(status_code=500, detail={"error": f"RAG query failed: {str(e)}"})
+        raise HTTPException(status_code=500, detail={"error": f"RAG query failed: {str(e)}"}) from e
 
 
 @router.post("/rag/code-examples")

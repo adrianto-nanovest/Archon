@@ -22,7 +22,7 @@ from .agentic_rag_strategy import AgenticRAGStrategy
 
 # Import all strategies
 from .base_search_strategy import BaseSearchStrategy
-from .hybrid_search_strategy import HybridSearchStrategy
+from .hybrid_search_strategy import ConfluenceSearchFilters, HybridSearchStrategy
 from .reranking_strategy import RerankingStrategy
 
 logger = get_logger(__name__)
@@ -91,6 +91,7 @@ class RAGService:
         filter_metadata: dict | None = None,
         use_hybrid_search: bool = False,
         cached_api_key: str | None = None,
+        confluence_filters: ConfluenceSearchFilters | None = None,
     ) -> list[dict[str, Any]]:
         """
         Document search with hybrid search capability.
@@ -101,6 +102,8 @@ class RAGService:
             filter_metadata: Optional metadata filter dict
             use_hybrid_search: Whether to use hybrid search
             cached_api_key: Deprecated parameter for compatibility
+            confluence_filters: Optional Confluence-specific filters (space_key, jira_issue,
+                hierarchy_path, mentioned_user). When active, non-Confluence results are excluded.
 
         Returns:
             List of matching documents
@@ -126,6 +129,7 @@ class RAGService:
                         query_embedding=query_embedding,
                         match_count=match_count,
                         filter_metadata=filter_metadata,
+                        confluence_filters=confluence_filters,
                     )
                     span.set_attribute("search_mode", "hybrid")
                 else:
@@ -242,7 +246,12 @@ class RAGService:
         return page_results[:match_count]
 
     async def perform_rag_query(
-        self, query: str, source: str = None, match_count: int = 5, return_mode: str = "chunks"
+        self,
+        query: str,
+        source: str = None,
+        match_count: int = 5,
+        return_mode: str = "chunks",
+        confluence_filters: ConfluenceSearchFilters | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """
         Unified RAG query with all strategies.
@@ -257,6 +266,8 @@ class RAGService:
             source: Optional source domain to filter results
             match_count: Maximum number of results to return
             return_mode: "chunks" (default) or "pages"
+            confluence_filters: Optional Confluence-specific filters (space_key, jira_issue,
+                hierarchy_path, mentioned_user). When active, non-Confluence results are excluded.
 
         Returns:
             Tuple of (success, result_dict)
@@ -289,6 +300,7 @@ class RAGService:
                     match_count=search_match_count,
                     filter_metadata=filter_metadata,
                     use_hybrid_search=use_hybrid_search,
+                    confluence_filters=confluence_filters,
                 )
 
                 span.set_attribute("raw_results_count", len(results))

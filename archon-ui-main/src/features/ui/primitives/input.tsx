@@ -59,12 +59,12 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({ 
 
 TextArea.displayName = "TextArea";
 
-// Label component for form fields
-export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+// FormLabel component for form fields with required indicator
+export interface FormLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
   required?: boolean;
 }
 
-export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
+export const FormLabel = React.forwardRef<HTMLLabelElement, FormLabelProps>(
   ({ className, children, required, ...props }, ref) => {
     return (
       // biome-ignore lint/a11y/noLabelWithoutControl: htmlFor is passed through props spread
@@ -80,7 +80,7 @@ export const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
   },
 );
 
-Label.displayName = "Label";
+FormLabel.displayName = "FormLabel";
 
 // FormField wrapper for consistent spacing
 export interface FormFieldProps {

@@ -25,7 +25,7 @@
 
 ## Required Changes
 
-### Backend Files to CREATE (~2,100 lines total)
+### Backend Files (Implemented)
 
 **Reference:** Complete architectural details in `docs/bmad/confluence-html-processing-analysis.md`
 
@@ -237,7 +237,7 @@ CREATE INDEX idx_crawled_pages_confluence_page_id ON archon_crawled_pages(...);
 
 **No changes to `archon_crawled_pages`** - already supports Confluence chunks via `metadata->>'page_id'`!
 
-### Frontend Files to CREATE (Future Phase)
+### Frontend Files (Future Phase)
 
 **Vertical Slice:** `archon-ui-main/src/features/confluence/`
 

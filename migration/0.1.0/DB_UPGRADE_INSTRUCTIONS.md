@@ -55,6 +55,33 @@ You only have to run the ones you haven't already! If you don't remember exactly
 - Records all applied migrations
 - Enables migration version control
 
+**2.9. `009_add_cascade_delete_constraints.sql`**
+- Adds CASCADE DELETE constraints
+- Ensures clean deletion of related records
+
+**2.10. `010_add_provider_placeholders.sql`**
+- Adds LLM provider configuration placeholders
+
+**2.11. `011_add_page_metadata_table.sql`**
+- Adds page metadata storage table
+
+### Confluence Integration Migrations (900-series)
+
+**900. `900_add_source_type_column.sql`**
+- Adds `source_type` column to `archon_sources` table
+- Enables distinguishing between web, upload, and confluence sources
+
+**901. `901_add_confluence_pages.sql`**
+- Creates `confluence_pages` table for Confluence page metadata
+- Stores JIRA links, user mentions, internal links, asset references
+- Includes performance indexes for space_key, JIRA links, and user mentions
+- Adds partial index on `archon_crawled_pages` for Confluence chunk linkage
+- RLS policies for service role and authenticated users
+
+**902. `902_add_search_performance_indexes.sql`**
+- Adds search optimization indexes
+- Improves query performance for hybrid search
+
 ## Migration Process (Follow This Order!)
 
 ### Step 1: Backup Your Data
@@ -74,6 +101,14 @@ You only have to run the ones you haven't already! If you don't remember exactly
 -- 6. Run: 006_ollama_create_indexes_optional.sql (optional - may timeout)
 -- 7. Run: 007_add_priority_column_to_tasks.sql
 -- 8. Run: 008_add_migration_tracking.sql
+-- 9. Run: 009_add_cascade_delete_constraints.sql
+-- 10. Run: 010_add_provider_placeholders.sql
+-- 11. Run: 011_add_page_metadata_table.sql
+
+-- Confluence Integration (if using Confluence feature):
+-- 12. Run: 900_add_source_type_column.sql
+-- 13. Run: 901_add_confluence_pages.sql
+-- 14. Run: 902_add_search_performance_indexes.sql
 ```
 
 ### Step 3: Restart Services
@@ -104,6 +139,14 @@ psql -h your-supabase-host -p 5432 -U postgres -d postgres
 \i /path/to/006_ollama_create_indexes_optional.sql
 \i /path/to/007_add_priority_column_to_tasks.sql
 \i /path/to/008_add_migration_tracking.sql
+\i /path/to/009_add_cascade_delete_constraints.sql
+\i /path/to/010_add_provider_placeholders.sql
+\i /path/to/011_add_page_metadata_table.sql
+
+# Confluence Integration (if using Confluence feature)
+\i /path/to/900_add_source_type_column.sql
+\i /path/to/901_add_confluence_pages.sql
+\i /path/to/902_add_search_performance_indexes.sql
 
 # Exit
 \q
@@ -120,6 +163,14 @@ docker cp 005_ollama_create_functions.sql supabase-db:/tmp/
 docker cp 006_ollama_create_indexes_optional.sql supabase-db:/tmp/
 docker cp 007_add_priority_column_to_tasks.sql supabase-db:/tmp/
 docker cp 008_add_migration_tracking.sql supabase-db:/tmp/
+docker cp 009_add_cascade_delete_constraints.sql supabase-db:/tmp/
+docker cp 010_add_provider_placeholders.sql supabase-db:/tmp/
+docker cp 011_add_page_metadata_table.sql supabase-db:/tmp/
+
+# Confluence Integration (if using Confluence feature)
+docker cp 900_add_source_type_column.sql supabase-db:/tmp/
+docker cp 901_add_confluence_pages.sql supabase-db:/tmp/
+docker cp 902_add_search_performance_indexes.sql supabase-db:/tmp/
 
 # Execute migrations in order
 docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/001_add_source_url_display_name.sql
@@ -130,6 +181,14 @@ docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/005_ollama_crea
 docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/006_ollama_create_indexes_optional.sql
 docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/007_add_priority_column_to_tasks.sql
 docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/008_add_migration_tracking.sql
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/009_add_cascade_delete_constraints.sql
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/010_add_provider_placeholders.sql
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/011_add_page_metadata_table.sql
+
+# Confluence Integration (if using Confluence feature)
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/900_add_source_type_column.sql
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/901_add_confluence_pages.sql
+docker exec -it supabase-db psql -U postgres -d postgres -f /tmp/902_add_search_performance_indexes.sql
 ```
 
 ## Migration Safety

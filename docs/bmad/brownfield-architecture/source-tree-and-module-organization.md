@@ -9,10 +9,11 @@ archon/
 │   │   ├── server/                  # Core business logic (port 8181)
 │   │   │   ├── api_routes/          # FastAPI routers
 │   │   │   │   ├── knowledge_api.py         # RAG, crawling, upload
+│   │   │   │   ├── confluence_api.py        # Confluence source management, sync
 │   │   │   │   ├── projects_api.py          # Project/task CRUD
-│   │   │   │   ├── migration_api.py         # NEW: Migration status
-│   │   │   │   ├── version_api.py           # NEW: Version checking
-│   │   │   │   └── (11 total routers)
+│   │   │   │   ├── migration_api.py         # Migration status
+│   │   │   │   ├── version_api.py           # Version checking
+│   │   │   │   └── (12 total routers)
 │   │   │   ├── services/            # Business logic layer
 │   │   │   │   ├── knowledge/               # Knowledge base management
 │   │   │   │   │   └── knowledge_item_service.py
@@ -22,6 +23,36 @@ archon/
 │   │   │   │   │   └── hybrid_search_strategy.py    # **ALREADY WORKS WITH CONFLUENCE**
 │   │   │   │   ├── embeddings/              # Multi-provider embeddings
 │   │   │   │   ├── crawling/                # Web crawling with domain filtering
+│   │   │   │   ├── confluence/              # Confluence Cloud integration
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── confluence_client.py         # REST API v2 client
+│   │   │   │   │   ├── confluence_processor.py      # HTML → Markdown pipeline
+│   │   │   │   │   ├── confluence_sync_service.py   # CQL-based incremental sync
+│   │   │   │   │   ├── confluence_validator.py      # Input validation
+│   │   │   │   │   ├── docling_processor.py         # PDF/Office processing
+│   │   │   │   │   ├── metadata_extractor.py        # JIRA, mentions extraction
+│   │   │   │   │   ├── table_processor.py           # Hierarchical markdown tables
+│   │   │   │   │   ├── macro_handlers/              # Confluence macro processors
+│   │   │   │   │   │   ├── __init__.py
+│   │   │   │   │   │   ├── base.py                  # BaseMacroHandler
+│   │   │   │   │   │   ├── attachment_macro.py      # File attachments
+│   │   │   │   │   │   ├── code_macro.py            # Code blocks
+│   │   │   │   │   │   ├── embed_macro.py           # YouTube/Maps embeds
+│   │   │   │   │   │   ├── generic_macro.py         # Unknown macro fallback
+│   │   │   │   │   │   ├── jira_macro.py            # 3-tier JIRA extraction
+│   │   │   │   │   │   └── panel_macro.py           # Info/Note/Warning panels
+│   │   │   │   │   ├── element_handlers/            # HTML element processors
+│   │   │   │   │   │   ├── __init__.py
+│   │   │   │   │   │   ├── base.py                  # BaseElementHandler
+│   │   │   │   │   │   ├── image_handler.py         # Attachment tracking
+│   │   │   │   │   │   ├── link_handler.py          # Page links with bulk API
+│   │   │   │   │   │   ├── simple_elements.py       # Emoticons, time, inline
+│   │   │   │   │   │   └── user_handler.py          # User mentions
+│   │   │   │   │   └── utils/                       # Shared utilities
+│   │   │   │   │       ├── __init__.py
+│   │   │   │   │       ├── deduplication.py         # Link/issue deduplication
+│   │   │   │   │       ├── html_utils.py            # BeautifulSoup helpers
+│   │   │   │   │       └── url_converter.py         # Iframe URL conversion
 │   │   │   │   ├── projects/                # Project/task services
 │   │   │   │   ├── llm_provider_service.py  # Multi-LLM orchestration
 │   │   │   │   ├── migration_service.py     # NEW: Migration tracking
@@ -77,8 +108,12 @@ archon/
 │       ├── 002_add_hybrid_search_tsvector.sql
 │       ├── 003-007_ollama_*.sql     # Ollama integration
 │       ├── 008_add_migration_tracking.sql    # Migration system
-│       ├── 009_add_provider_placeholders.sql # LLM providers
-│       └── 901_add_confluence_pages.sql      # **TO CREATE: Confluence tables**
+│       ├── 009_add_cascade_delete_constraints.sql
+│       ├── 010_add_provider_placeholders.sql # LLM providers
+│       ├── 011_add_page_metadata_table.sql
+│       ├── 900_add_source_type_column.sql    # Confluence source type
+│       ├── 901_add_confluence_pages.sql      # Confluence pages table
+│       └── 902_add_search_performance_indexes.sql  # Search optimization
 │
 ├── .bmad-core/                      # BMad methodology (100+ files)
 │   ├── agents/                      # 10 agent roles
@@ -157,7 +192,35 @@ archon/
   - Supports local Ollama models
   - Batch processing for efficiency
 
-### Migration & Versioning (NEW in v2.0)
+### Confluence Integration Services
+
+- **`confluence_client.py`**: Confluence REST API v2 integration
+  - CQL search for incremental sync
+  - Bulk user/page lookups (N+1 prevention)
+  - Rate limit handling with exponential backoff
+
+- **`confluence_sync_service.py`**: CQL-based incremental sync orchestration
+  - Atomic chunk update strategy (zero-downtime)
+  - Sync observability and metrics tracking
+  - Deletion detection with configurable strategies
+
+- **`confluence_processor.py`**: Five-pass HTML → Markdown pipeline
+  - Pass 1: Process Confluence macros (code, panels, JIRA, attachments)
+  - Pass 2: Process special HTML elements (users, links, images)
+  - Pass 3: Process tables (hierarchical markdown conversion)
+  - Pass 4: Convert to markdown (markdownify with ATX headings)
+  - Pass 5: Extract metadata (JIRA links, mentions, assets)
+
+- **`macro_handlers/`**: Modular Confluence macro processors
+  - Code blocks, panels, JIRA macros, attachments, embeds
+
+- **`element_handlers/`**: HTML element processors
+  - User mentions, page links, images with bulk API resolution
+
+- **`table_processor.py`**: Hierarchical markdown table conversion
+  - Colspan/rowspan content duplication for RAG optimization
+
+### Migration & Versioning
 
 - **`migration_service.py`**: Database migration tracking
   - Tracks applied migrations in `archon_migrations` table

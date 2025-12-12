@@ -164,23 +164,23 @@ changed_pages = confluence_client.cql_search(cql, expand='body.storage,version,a
 - Source creation form, sync status, progress display
 - Unit tests, integration tests, load testing (4000+ pages)
 
-## Files to Create (~2,100 lines total)
+## Files Created (~2,100 lines total)
 
 ### 1. Backend Services - Modular Architecture
 
 **Core Services:**
-- `python/src/server/services/confluence/confluence_client.py` (~200 lines)
+- `python/src/server/services/confluence/confluence_client.py`
   - Confluence REST API v2 integration using `atlassian-python-api`
   - CQL search for incremental sync
   - Bulk user/page lookups (N+1 prevention)
 
-- `python/src/server/services/confluence/confluence_sync_service.py` (~400 lines)
+- `python/src/server/services/confluence/confluence_sync_service.py`
   - CQL-based incremental sync orchestration
   - Atomic chunk update strategy (zero-downtime)
   - Sync observability and metrics tracking
   - Deletion detection with configurable strategies
 
-- `python/src/server/services/confluence/confluence_processor.py` (~200 lines)
+- `python/src/server/services/confluence/confluence_processor.py`
   - Main orchestrator for HTML → Markdown conversion
   - Five-pass processing pipeline:
     1. Process Confluence macros
@@ -190,48 +190,62 @@ changed_pages = confluence_client.cql_search(cql, expand='body.storage,version,a
     5. Extract metadata
   - Handler registration and dependency injection
 
-**Macro Handlers** (`macro_handlers/` - 6 files):
-- `code_macro.py` (~100 lines) - Language-tagged code blocks with whitespace preservation
-- `panel_macro.py` (~120 lines) - Info/Note/Warning/Tip with emoji prefixes
-- `jira_macro.py` (~150 lines) - **3-tier extraction** (macros + URLs + regex) for 95%+ coverage
-- `attachment_macro.py` (~100 lines) - File references with type-based emoji mapping
-- `embed_macro.py` (~120 lines) - Iframe URL conversion (15+ platforms: YouTube, Vimeo, Maps, etc.)
-- `generic_macro.py` (~80 lines) - Unknown macro fallback handler
+- `python/src/server/services/confluence/confluence_validator.py`
+  - Input validation for Confluence source configuration
 
-**Element Handlers** (`element_handlers/` - 4 files):
-- `link_handler.py` (~120 lines) - Page links + external links with bulk API lookups
-- `user_handler.py` (~100 lines) - User mentions with bulk resolution via `get_users_by_account_ids()`
-- `image_handler.py` (~100 lines) - Attachment tracking with extension-based icons
-- `simple_elements.py` (~80 lines) - Simplified handlers for emoticons, time, inline comments
+- `python/src/server/services/confluence/docling_processor.py`
+  - PDF/Office document processing integration
+
+**Macro Handlers** (`macro_handlers/` - 7 files):
+- `base.py` - BaseMacroHandler abstract class
+- `code_macro.py` - Language-tagged code blocks with whitespace preservation
+- `panel_macro.py` - Info/Note/Warning/Tip with emoji prefixes
+- `jira_macro.py` - **3-tier extraction** (macros + URLs + regex) for 95%+ coverage
+- `attachment_macro.py` - File references with type-based emoji mapping
+- `embed_macro.py` - Iframe URL conversion (15+ platforms: YouTube, Vimeo, Maps, etc.)
+- `generic_macro.py` - Unknown macro fallback handler
+
+**Element Handlers** (`element_handlers/` - 5 files):
+- `base.py` - BaseElementHandler abstract class
+- `link_handler.py` - Page links + external links with bulk API lookups
+- `user_handler.py` - User mentions with bulk resolution via `get_users_by_account_ids()`
+- `image_handler.py` - Attachment tracking with extension-based icons
+- `simple_elements.py` - Handlers for emoticons, time, inline comments
 
 **Processing Modules:**
-- `table_processor.py` (~350 lines)
+- `table_processor.py`
   - **Hierarchical markdown conversion** (NOT standard tables!)
   - Colspan/rowspan content duplication for RAG optimization
   - Multi-level header matrix building
   - Metadata enrichment (table complexity, purpose inference)
 
-- `metadata_extractor.py` (~150 lines)
+- `metadata_extractor.py`
   - 3-tier JIRA extraction (macros → URLs → regex)
   - User mention deduplication
   - Link deduplication (internal/external)
   - Asset aggregation from multiple sources
 
 **Utilities** (`utils/` - 3 files):
-- `html_utils.py` (~100 lines) - BeautifulSoup helpers, whitespace normalization
-- `url_converter.py` (~100 lines) - Iframe embed URL conversion (YouTube, Maps, etc.)
-- `deduplication.py` (~100 lines) - Link/issue deduplication logic
+- `html_utils.py` - BeautifulSoup helpers, whitespace normalization
+- `url_converter.py` - Iframe embed URL conversion (YouTube, Maps, etc.)
+- `deduplication.py` - Link/issue deduplication logic
 
 ### 2. API Routes
-- `python/src/server/api_routes/confluence_api.py` (~100 lines)
+- `python/src/server/api_routes/confluence_api.py` (~670 lines)
+  - Source CRUD with credential validation
+  - Background sync triggering with ProgressTracker
+  - ETag caching for list/status/pages endpoints
+  - Paginated pages listing
 
-### 3. Database Migration
-- `migration/0.1.0/901_add_confluence_pages.sql` (schema + indexes)
+### 3. Database Migrations
+- `migration/0.1.0/900_add_source_type_column.sql` - Adds source_type to archon_sources
+- `migration/0.1.0/901_add_confluence_pages.sql` - Creates confluence_pages table with indexes
+- `migration/0.1.0/902_add_search_performance_indexes.sql` - Search optimization indexes
 
 ### 4. Frontend (future)
 - `archon-ui-main/src/features/confluence/` (vertical slice)
 
-**Total:** ~2,100 lines (18 focused files vs. 3 monolithic files)
+**Total:** ~2,100 lines (25 files in modular architecture)
 
 ## Docling Asset Processing Integration
 

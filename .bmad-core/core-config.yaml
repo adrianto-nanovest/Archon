@@ -1,23 +1,22 @@
 # <!-- Powered by BMAD™ Core -->
 markdownExploder: true
 qa:
-  qaLocation: docs/qa
+  qaLocation: docs/bmad/qa
 prd:
-  prdFile: docs/prd.md
+  prdFile: docs/bmad/brownfield-prd.md
   prdVersion: v4
   prdSharded: true
-  prdShardedLocation: docs/prd
+  prdShardedLocation: docs/bmad/brownfield-prd
   epicFilePattern: epic-{n}*.md
 architecture:
-  architectureFile: docs/architecture.md
+  architectureFile: docs/bmad/brownfield-architecture.md
   architectureVersion: v4
   architectureSharded: true
-  architectureShardedLocation: docs/architecture
+  architectureShardedLocation: docs/bmad/brownfield-architecture
 customTechnicalDocuments: null
 devLoadAlwaysFiles:
-  - docs/architecture/coding-standards.md
-  - docs/architecture/tech-stack.md
-  - docs/architecture/source-tree.md
+  - docs/bmad/brownfield-architecture/index.md
+  - docs/bmad/brownfield-architecture/confluence-integration-architecture.md
 devDebugLog: .ai/debug-log.md
-devStoryLocation: docs/stories
+devStoryLocation: docs/bmad/stories
 slashPrefix: BMad

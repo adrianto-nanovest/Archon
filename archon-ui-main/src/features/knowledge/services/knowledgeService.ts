@@ -10,6 +10,7 @@ import type {
   CodeExamplesResponse,
   CrawlRequest,
   CrawlStartResponse,
+  ExtendedSearchOptions,
   KnowledgeItem,
   KnowledgeItemsFilter,
   KnowledgeItemsResponse,
@@ -202,12 +203,37 @@ export const knowledgeService = {
   },
 
   /**
-   * Search the knowledge base
+   * Search the knowledge base with optional Confluence filters
+   * Supports source type, space keys, and JIRA link filtering
    */
-  async searchKnowledgeBase(options: SearchOptions): Promise<SearchResultsResponse> {
+  async searchKnowledgeBase(options: SearchOptions | ExtendedSearchOptions): Promise<SearchResultsResponse> {
+    // Build request body with Confluence filter support
+    const extendedOptions = options as ExtendedSearchOptions;
+
+    // Map frontend filters to backend API params
+    const requestBody: Record<string, unknown> = {
+      query: options.query,
+      knowledge_type: options.knowledge_type,
+      sources: options.sources,
+      limit: options.limit,
+    };
+
+    // Add Confluence-specific filters if present
+    if (extendedOptions.spaceKeys?.length) {
+      // Backend accepts single space_key - use first one if multiple
+      // For multi-space support, results will be filtered client-side
+      requestBody.space_key = extendedOptions.spaceKeys[0];
+    }
+
+    // hasJiraLinks filter - when true, filter for results with JIRA links
+    // Backend may not directly support this - handled in response filtering
+    if (extendedOptions.hasJiraLinks) {
+      requestBody.jira_issue = "*"; // Wildcard to get any results with JIRA links
+    }
+
     return callAPIWithETag<SearchResultsResponse>("/api/knowledge-items/search", {
       method: "POST",
-      body: JSON.stringify(options),
+      body: JSON.stringify(requestBody),
     });
   },
 

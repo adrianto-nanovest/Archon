@@ -10,8 +10,8 @@ import {
   DialogTitle,
   FormField,
   FormGrid,
+  FormLabel,
   Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -98,7 +98,7 @@ export const TaskEditModal = memo(
 
           <div className="space-y-4">
             <FormField>
-              <Label required>Title</Label>
+              <FormLabel required>Title</FormLabel>
               <Input
                 value={localTask?.title || ""}
                 onChange={(e) => handleTitleChange(e.target.value)}
@@ -107,7 +107,7 @@ export const TaskEditModal = memo(
             </FormField>
 
             <FormField>
-              <Label>Description</Label>
+              <FormLabel>Description</FormLabel>
               <TextArea
                 value={localTask?.description || ""}
                 onChange={(e) => handleDescriptionChange(e.target.value)}
@@ -118,7 +118,7 @@ export const TaskEditModal = memo(
 
             <FormGrid columns={2}>
               <FormField>
-                <Label>Status</Label>
+                <FormLabel>Status</FormLabel>
                 <Select
                   value={localTask?.status || "todo"}
                   onValueChange={(value) =>
@@ -138,7 +138,7 @@ export const TaskEditModal = memo(
               </FormField>
 
               <FormField>
-                <Label>Priority</Label>
+                <FormLabel>Priority</FormLabel>
                 <Select
                   value={localTask?.priority || "medium"}
                   onValueChange={(value) =>
@@ -160,7 +160,7 @@ export const TaskEditModal = memo(
 
             <FormGrid columns={2}>
               <FormField>
-                <Label>Assignee</Label>
+                <FormLabel>Assignee</FormLabel>
                 <ComboBox
                   options={ASSIGNEE_OPTIONS}
                   value={localTask?.assignee || "User"}
@@ -174,7 +174,7 @@ export const TaskEditModal = memo(
               </FormField>
 
               <FormField>
-                <Label>Feature</Label>
+                <FormLabel>Feature</FormLabel>
                 <FeatureSelect
                   value={localTask?.feature || ""}
                   onChange={handleFeatureChange}

@@ -56,9 +56,9 @@ CREATE TABLE archon_code_examples (
 );
 ```
 
-#### Confluence Tables (TO CREATE in migration 010)
+#### Confluence Tables (migration 901)
 
-**`confluence_pages`** - Confluence metadata (NEW)
+**`confluence_pages`** - Confluence page metadata
 ```sql
 CREATE TABLE confluence_pages (
   page_id TEXT PRIMARY KEY,  -- Confluence native page ID
@@ -261,15 +261,15 @@ POST   /api/knowledge/search            # RAG search (hybrid)
 POST   /api/knowledge/code-search       # Code-specific search
 ```
 
-### Confluence APIs (`confluence_api.py` - TO CREATE)
+### Confluence APIs (`confluence_api.py`)
 
 ```
-POST   /api/confluence/sources          # Create Confluence source
-GET    /api/confluence/sources          # List Confluence sources
-POST   /api/confluence/{id}/sync        # Trigger manual sync
-GET    /api/confluence/{id}/status      # Get sync status
-DELETE /api/confluence/{id}             # Delete source (CASCADE)
-GET    /api/confluence/{id}/pages       # List pages in space
+POST   /api/confluence/sources          # Create Confluence source (validates credentials)
+GET    /api/confluence/sources          # List Confluence sources (ETag cached)
+POST   /api/confluence/{id}/sync        # Trigger manual sync (background task)
+GET    /api/confluence/{id}/status      # Get sync status (ETag cached, X-Poll-Interval)
+DELETE /api/confluence/{id}             # Delete source (CASCADE handles chunks)
+GET    /api/confluence/{id}/pages       # List pages in space (paginated, ETag cached)
 ```
 
 ### Migration APIs (`migration_api.py` - NEW)

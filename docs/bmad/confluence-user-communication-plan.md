@@ -40,7 +40,7 @@ Before you begin, ensure you have:
 ### 1.3 Store Token Securely
 
 - ⚠️ **Never share your API token** or commit it to version control
-- ✅ Archon encrypts tokens using bcrypt before storing in database
+- ✅ Archon encrypts tokens using Fernet symmetric encryption before storing in database
 - ✅ Tokens are never logged or exposed in error messages
 
 ---
@@ -324,6 +324,45 @@ Duration: 47 seconds
 - Use "Weekly Reconciliation" deletion strategy (fewer API calls)
 - Check for multiple concurrent syncs (stop duplicates)
 
+#### 6. "Invalid URL" or "Confluence URL must use HTTPS"
+
+**Cause:** URL format is incorrect or using HTTP instead of HTTPS
+
+**Solutions:**
+- Ensure URL starts with `https://` (not `http://`)
+- Use format: `https://your-company.atlassian.net/wiki`
+- Don't include space paths (e.g., remove `/spaces/DEVDOCS`)
+
+#### 7. "Space key must be alphanumeric"
+
+**Cause:** Space key contains invalid characters
+
+**Solutions:**
+- Use only letters and numbers (A-Z, 0-9)
+- Check Confluence URL for correct space key
+- Space keys are typically uppercase (e.g., DEVDOCS, ENG, PROJ)
+
+### Rollback & Recovery Procedures
+
+**If sync data becomes corrupted or out of sync:**
+
+1. **Full Re-sync (Recommended)**
+   - Click "Delete" on the Confluence source card
+   - Confirm deletion (removes all synced data)
+   - Re-create the source with same credentials
+   - Trigger new sync - this performs a clean full sync
+
+2. **Partial Recovery**
+   - If only specific pages are missing, wait for next incremental sync
+   - The incremental sync will detect and re-sync modified pages
+   - Check deletion detection strategy is appropriate for your use case
+
+3. **Data Integrity Check**
+   - Compare page counts: Confluence Space Settings vs Archon source card
+   - If counts differ significantly, perform a full re-sync
+
+**Note:** Deleting a Confluence source permanently removes all synced content from the knowledge base. The original data in Confluence is never affected.
+
 ### Getting Help
 
 **Still stuck? Here's how to get support:**
@@ -333,11 +372,11 @@ Duration: 47 seconds
    - Frontend: Browser DevTools → Console tab
 
 2. **Search Existing Issues:**
-   - [GitHub Issues](https://github.com/your-repo/archon/issues?q=is%3Aissue+label%3Aconfluence)
+   - [GitHub Issues](https://github.com/coleam00/Archon/issues?q=is%3Aissue+label%3Aconfluence)
 
 3. **Report a Bug:**
    - Click **"Give Feedback"** button in Confluence tab
-   - Or open [GitHub Issue](https://github.com/your-repo/archon/issues/new) with:
+   - Or open [GitHub Issue](https://github.com/coleam00/Archon/issues/new) with:
      - Error message (sanitize any sensitive data)
      - Steps to reproduce
      - Confluence space size and URL format
@@ -387,7 +426,7 @@ Deleted pages are removed from search results after detection.
 ### Q: Is my API token secure?
 
 **A:** Yes. Tokens are:
-- Encrypted with bcrypt before database storage
+- Encrypted with Fernet symmetric encryption before database storage
 - Never logged or exposed in UI/errors
 - Transmitted only over HTTPS
 - Revocable in Atlassian account settings anytime
@@ -460,10 +499,10 @@ The following permissions are NOT needed:
 ## Support & Feedback
 
 **Documentation Feedback:**
-- Found an error in this guide? [Edit on GitHub](https://github.com/your-repo/archon/edit/main/docs/bmad/confluence-integration-guide.md)
+- Found an error in this guide? [Edit on GitHub](https://github.com/coleam00/Archon/edit/main/docs/bmad/confluence-user-communication-plan.md)
 
 **Feature Requests:**
-- Suggest improvements in [GitHub Discussions](https://github.com/your-repo/archon/discussions)
+- Suggest improvements in [GitHub Discussions](https://github.com/coleam00/Archon/discussions)
 
 **Security Issues:**
 - Report privately to security@your-company.com

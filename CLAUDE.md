@@ -104,6 +104,11 @@ uv run ruff check        # Run linter
 uv run ruff check --fix  # Auto-fix linting issues
 uv run mypy src/         # Type check
 
+# Confluence Integration Tests
+uv run pytest tests/server/services/confluence/ -v             # All Confluence tests
+uv run pytest tests/server/api_routes/test_confluence_api.py -v  # API route tests
+uv run pytest tests/server/services/confluence/test_confluence_integration.py -v  # Integration tests
+
 # Agent Work Orders Service (independent microservice)
 make agent-work-orders  # Run agent work orders service locally on 8053
 # Or manually:
@@ -183,9 +188,48 @@ See implementation examples:
 - Exception handlers: `python/src/server/main.py` (search for @app.exception_handler)
 - Service error handling: `python/src/server/services/` (various services)
 
-## Confluence RAG Integration (Planned)
+## Confluence RAG Integration
+
+Confluence Cloud integration for syncing Confluence spaces into the RAG knowledge base.
+
+### Confluence File Locations
+
+**Backend Services:**
+- `python/src/server/services/confluence/` - Core sync and processing services
+  - `confluence_client.py` - Confluence REST API v2 client
+  - `confluence_sync_service.py` - CQL-based incremental sync
+  - `confluence_processor.py` - HTML → Markdown five-pass pipeline
+  - `macro_handlers/` - Confluence macro processors (code, JIRA, panels, etc.)
+  - `element_handlers/` - HTML element processors (users, links, images)
+  - `utils/` - Shared utilities (deduplication, URL conversion)
+
+**API Routes:**
+- `python/src/server/api_routes/confluence_api.py` - REST endpoints for source management
+
+**Database Migrations:**
+- `migration/0.1.0/900_add_source_type_column.sql` - Adds source_type to sources
+- `migration/0.1.0/901_add_confluence_pages.sql` - Creates confluence_pages table
+- `migration/0.1.0/902_add_search_performance_indexes.sql` - Search optimization
+
+**Tests:**
+- `python/tests/server/services/confluence/` - Unit and integration tests
+- `python/tests/server/api_routes/test_confluence_api.py` - API route tests
+
+### Confluence API Endpoints
+
+```
+POST   /api/confluence/sources          # Create Confluence source
+GET    /api/confluence/sources          # List Confluence sources
+POST   /api/confluence/{id}/sync        # Trigger manual sync
+GET    /api/confluence/{id}/status      # Get sync status
+DELETE /api/confluence/{id}             # Delete source (CASCADE)
+GET    /api/confluence/{id}/pages       # List pages in space
+```
+
+### Architecture Documentation
 
 **Implementation Guide**: docs/bmad/CONFLUENCE_RAG_INTEGRATION.md - Hybrid schema, CQL-based sync, 90% code reuse
+**User Setup Guide**: docs/confluence-integration-guide.md - Step-by-step setup instructions
 **PRD**: docs/bmad/brownfield-prd.md - Full requirements, 21 stories across 5 epics
 **PRD (Sharded docs)**: @docs/bmad/brownfield-prd/ (12 focused sections with index)
 **PO Validation**: @docs/bmad/PO-VALIDATION-DELIVERABLES-SUMMARY.md - Approved architecture with security audit
@@ -358,6 +402,12 @@ When connected to Claude/Cursor/Windsurf, the following tools are available:
 
 - `archon:find_versions` - Find version history or get specific version
 - `archon:manage_version` - Manage versions with actions: "create", "restore"
+
+### Confluence (Future)
+
+Confluence-specific MCP tools are not yet implemented. Confluence content is searchable through the existing `archon:rag_search_knowledge_base` tool. Planned future tools:
+- `archon:confluence_search` - Search Confluence content with space/metadata filters
+- `archon:confluence_list_spaces` - List connected Confluence spaces
 
 ## Important Notes
 

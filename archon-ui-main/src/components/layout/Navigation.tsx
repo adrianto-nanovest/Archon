@@ -1,8 +1,9 @@
-import { BookOpen, Bot, Palette, Settings } from "lucide-react";
+import { BookOpen, Bot, Palette, Settings, Sparkles } from "lucide-react";
 import type React from "react";
 import { Link, useLocation } from "react-router-dom";
 // TEMPORARY: Use old SettingsContext until settings are migrated
 import { useSettings } from "../../contexts/SettingsContext";
+import { useShowChangelog } from "../../features/shared/hooks/useShowChangelog";
 import { glassmorphism } from "../../features/ui/primitives/styles";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../features/ui/primitives/tooltip";
 import { cn } from "../../lib/utils";
@@ -25,6 +26,7 @@ interface NavigationProps {
 export function Navigation({ className }: NavigationProps) {
   const location = useLocation();
   const { projectsEnabled, styleGuideEnabled, agentWorkOrdersEnabled } = useSettings();
+  const changelog = useShowChangelog();
 
   // Navigation items configuration
   const navigationItems: NavigationItem[] = [
@@ -181,6 +183,41 @@ export function Navigation({ className }: NavigationProps) {
           );
         })}
       </nav>
+
+      {/* Separator before What's New */}
+      <div className="w-8 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-700 to-transparent" />
+
+      {/* What's New Button */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => changelog.show()}
+            className={cn(
+              "relative p-3 rounded-lg transition-all duration-300",
+              "flex items-center justify-center",
+              "text-gray-500 dark:text-zinc-500",
+              "hover:text-cyan-600 dark:hover:text-cyan-400",
+              "hover:bg-white/10 dark:hover:bg-white/5",
+            )}
+          >
+            <Sparkles className="h-5 w-5" />
+            {/* Badge indicator when changelog not dismissed */}
+            {!changelog.isDismissed && (
+              <span
+                className={cn(
+                  "absolute top-1 right-1 w-2.5 h-2.5 rounded-full",
+                  "bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]",
+                  "animate-pulse",
+                )}
+              />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>What's New</p>
+        </TooltipContent>
+      </Tooltip>
     </nav>
   );
 }

@@ -198,3 +198,32 @@ export interface KnowledgeSource {
   created_at: string;
   updated_at: string;
 }
+
+// Search filter types for Confluence integration (Story 5.4)
+export type SourceTypeFilter = "all" | "web" | "upload" | "confluence";
+
+export interface SearchFiltersState {
+  sourceType: SourceTypeFilter;
+  spaceKeys: string[]; // Multi-select for Confluence spaces
+  hasJiraLinks: boolean;
+}
+
+// JIRA issue link structure from Confluence metadata
+export interface JiraIssueLink {
+  issue_key: string;
+  issue_url: string;
+}
+
+// Extended search result with Confluence metadata
+export interface ConfluenceSearchResult extends DocumentChunk {
+  spaceKey?: string;
+  jiraIssueLinks?: JiraIssueLink[];
+  path?: string; // Hierarchy path like "/parent_id/child_id"
+}
+
+// Extended search options with Confluence filters
+export interface ExtendedSearchOptions extends SearchOptions {
+  sourceType?: SourceTypeFilter;
+  spaceKeys?: string[];
+  hasJiraLinks?: boolean;
+}

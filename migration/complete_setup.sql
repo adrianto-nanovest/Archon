@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS archon_sources (
     summary TEXT,
     total_word_count INTEGER DEFAULT 0,
     title TEXT,
+    source_type TEXT DEFAULT 'web' CHECK (source_type IN ('web', 'confluence')),
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -190,12 +191,14 @@ CREATE INDEX IF NOT EXISTS idx_archon_sources_url ON archon_sources(source_url);
 CREATE INDEX IF NOT EXISTS idx_archon_sources_display_name ON archon_sources(source_display_name);
 CREATE INDEX IF NOT EXISTS idx_archon_sources_metadata ON archon_sources USING GIN(metadata);
 CREATE INDEX IF NOT EXISTS idx_archon_sources_knowledge_type ON archon_sources((metadata->>'knowledge_type'));
+CREATE INDEX IF NOT EXISTS idx_archon_sources_source_type ON archon_sources(source_type);
 
 -- Add comments to document the columns
 COMMENT ON COLUMN archon_sources.source_id IS 'Unique hash identifier for the source (16-char SHA256 hash of URL)';
 COMMENT ON COLUMN archon_sources.source_url IS 'The original URL that was crawled to create this source';
 COMMENT ON COLUMN archon_sources.source_display_name IS 'Human-readable name for UI display (e.g., "GitHub - microsoft/typescript")';
 COMMENT ON COLUMN archon_sources.title IS 'Descriptive title for the source (e.g., "Pydantic AI API Reference")';
+COMMENT ON COLUMN archon_sources.source_type IS 'Type of source: web (crawl/upload) or confluence (Confluence Cloud integration)';
 COMMENT ON COLUMN archon_sources.metadata IS 'JSONB field storing knowledge_type, tags, and other metadata';
 
 -- Create the documentation chunks table
@@ -385,6 +388,105 @@ BEGIN
     END CASE;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+
+-- =====================================================
+-- SECTION 4.6: CONFLUENCE INTEGRATION TABLES
+-- =====================================================
+
+-- Create confluence_pages table for Confluence Cloud integration
+-- Stores Confluence page metadata using Hybrid Schema approach:
+-- - Rich metadata (~15KB) stored in this dedicated table
+-- - Chunks stored in existing archon_crawled_pages table (unified storage)
+-- - Linked via metadata->>'page_id' for 90% code reuse
+CREATE TABLE IF NOT EXISTS confluence_pages (
+  -- Primary identifier (Confluence native page ID)
+  page_id TEXT PRIMARY KEY,
+
+  -- Foreign key to archon_sources with CASCADE DELETE
+  source_id TEXT NOT NULL REFERENCES archon_sources(source_id) ON DELETE CASCADE,
+
+  -- Core fields for filtering and display
+  space_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  last_modified TIMESTAMPTZ NOT NULL,
+
+  -- Soft delete tracking (preserves metadata for audit trail)
+  is_deleted BOOLEAN DEFAULT FALSE,
+
+  -- Materialized path for efficient hierarchy queries
+  -- Pattern: "/parent_id/child_id/grandchild_id"
+  path TEXT,
+
+  -- Rich metadata stored ONCE per page (~15 KB per page)
+  metadata JSONB NOT NULL,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add table-level comments
+COMMENT ON TABLE confluence_pages IS 'Stores Confluence page metadata using Hybrid Schema approach - chunks stored in archon_crawled_pages for unified search';
+COMMENT ON COLUMN confluence_pages.page_id IS 'Confluence native page ID (primary key)';
+COMMENT ON COLUMN confluence_pages.source_id IS 'Foreign key to archon_sources with CASCADE DELETE for complete cleanup';
+COMMENT ON COLUMN confluence_pages.space_key IS 'Confluence space key for filtering (indexed)';
+COMMENT ON COLUMN confluence_pages.title IS 'Page title for display and search';
+COMMENT ON COLUMN confluence_pages.version IS 'Confluence page version number for incremental sync tracking';
+COMMENT ON COLUMN confluence_pages.last_modified IS 'Last modified timestamp from Confluence for CQL-based sync';
+COMMENT ON COLUMN confluence_pages.is_deleted IS 'Soft delete flag - preserves metadata for audit trail while removing chunks';
+COMMENT ON COLUMN confluence_pages.path IS 'Materialized path for hierarchy queries (pattern: /parent_id/child_id/...)';
+COMMENT ON COLUMN confluence_pages.metadata IS 'Rich JSONB metadata (~15KB): ancestors, children, JIRA links, mentions, links, assets, word count';
+
+-- Performance indexes on confluence_pages
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_source
+  ON confluence_pages(source_id)
+  WHERE is_deleted = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_space
+  ON confluence_pages(space_key)
+  WHERE is_deleted = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_version
+  ON confluence_pages(page_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_path
+  ON confluence_pages USING btree(path text_pattern_ops);
+
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_jira
+  ON confluence_pages
+  USING gin((metadata->'jira_issue_links') jsonb_path_ops);
+
+CREATE INDEX IF NOT EXISTS idx_confluence_pages_mentions
+  ON confluence_pages
+  USING gin((metadata->'user_mentions') jsonb_path_ops);
+
+-- Composite index for Confluence search optimization
+CREATE INDEX IF NOT EXISTS idx_confluence_search
+  ON confluence_pages(space_key, page_id)
+  WHERE is_deleted = FALSE;
+
+-- Chunk linkage index on existing archon_crawled_pages
+-- Links Confluence chunks back to their parent pages via metadata->>'page_id'
+CREATE INDEX IF NOT EXISTS idx_crawled_pages_confluence_page_id
+  ON archon_crawled_pages ((metadata->>'page_id'))
+  WHERE metadata ? 'page_id';
+
+-- Enable Row Level Security
+ALTER TABLE confluence_pages ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (makes this idempotent)
+DROP POLICY IF EXISTS "Allow service role full access to confluence_pages" ON confluence_pages;
+DROP POLICY IF EXISTS "Allow authenticated users to read confluence_pages" ON confluence_pages;
+
+-- Service role has full access (backend operations)
+CREATE POLICY "Allow service role full access to confluence_pages" ON confluence_pages
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- Authenticated users can only read Confluence pages (no modification)
+CREATE POLICY "Allow authenticated users to read confluence_pages" ON confluence_pages
+    FOR SELECT TO authenticated
+    USING (true);
 
 -- =====================================================
 -- SECTION 5: SEARCH FUNCTIONS

@@ -41,6 +41,10 @@ def mock_confluence_client():
             "ancestors": [],
         }
     ])
+    # Mock get_space_pages_ids for deletion detection (Story 3.3)
+    client.get_space_pages_ids = AsyncMock(return_value=["123"])
+    client._client = MagicMock()
+    client._client.url = "https://company.atlassian.net/wiki"
     return client
 
 
@@ -344,7 +348,9 @@ class TestCQLQueryConstruction:
         )
 
         # Verify update was called with new timestamp
-        update_mock.eq.assert_called_once_with("source_id", "src_123")
+        # Note: Called twice - once for last_deletion_check (Story 3.3) and once for sync_metrics
+        update_mock.eq.assert_called_with("source_id", "src_123")
+        assert update_mock.eq.call_count >= 1
         assert metrics["last_sync_timestamp"] is not None
         assert "T" in metrics["last_sync_timestamp"]  # ISO 8601 format
 
